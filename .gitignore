@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+apps/*/node_modules/
+contracts/node_modules/
+
+# Environment files
+.env
+*.env
+contracts/.env
+
+# Build outputs
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Hardhat artifacts
+contracts/artifacts/
+contracts/cache/
+contracts/typechain/
+
+# Misc
+.DS_Store
