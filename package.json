@@ -1,0 +1,21 @@
+{
+  "name": "perpetual-trading-demo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Research-driven perpetual trading MVP with React, shadcn/ui, and Hardhat placeholders.",
+  "workspaces": [
+    "apps/web",
+    "apps/mock-server",
+    "contracts"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace apps/web",
+    "dev:server": "npm run dev --workspace apps/mock-server",
+    "build": "npm run build --workspace apps/web",
+    "lint": "npm run lint --workspace apps/web",
+    "typecheck": "npm run typecheck --workspace apps/web",
+    "format": "npm run lint --workspace apps/web -- --fix",
+    "hardhat": "npm run hardhat --workspace contracts"
+  },
+  "license": "MIT"
+}
