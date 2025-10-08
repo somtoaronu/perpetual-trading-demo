@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 215 28% 10%;
+  --foreground: 0 0% 100%;
+  --muted: 215 16% 18%;
+  --muted-foreground: 215 20% 65%;
+  --popover: 215 28% 12%;
+  --popover-foreground: 210 40% 98%;
+  --border: 215 28% 18%;
+  --input: 215 28% 18%;
+  --card: 215 28% 14%;
+  --card-foreground: 210 40% 98%;
+  --primary: 167 100% 45%;
+  --primary-foreground: 230 40% 10%;
+  --secondary: 215 20% 20%;
+  --secondary-foreground: 210 40% 96%;
+  --accent: 260 70% 55%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 167 100% 45%;
+  --radius: 0.75rem;
+}
+
+.light {
+  --background: 210 40% 99%;
+  --foreground: 224 71% 4%;
+  --muted: 214 32% 91%;
+  --muted-foreground: 215 20% 45%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71% 6%;
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 30% 96%;
+  --secondary-foreground: 224 71% 4%;
+  --accent: 260 70% 55%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 221 83% 53%;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+.bg-grid {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 0
+  );
+  background-size: 40px 40px;
+}
