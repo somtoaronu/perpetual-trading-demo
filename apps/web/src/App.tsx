@@ -1,13 +1,21 @@
-import { MarketSidebar } from "./components/market-sidebar";
-import { TopBar } from "./components/top-bar";
 import { AccountOverview } from "./components/account-overview";
+import { MarketSidebar } from "./components/market-sidebar";
+import { OnboardingWizard } from "./components/onboarding/onboarding-wizard";
 import { ChartPanel } from "./components/chart-panel";
 import { EducationPanel } from "./components/education-panel";
 import { OrderflowPanel } from "./components/orderflow-panel";
 import { PositionsPanel } from "./components/positions-panel";
 import { TradingTicket } from "./components/trading-ticket";
+import { TopBar } from "./components/top-bar";
+import { useOnboarding } from "./providers/onboarding";
 
 function App() {
+  const { completed } = useOnboarding();
+
+  if (!completed) {
+    return <OnboardingWizard />;
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
