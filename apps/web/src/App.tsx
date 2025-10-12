@@ -4,7 +4,6 @@ import { AccountOverview } from "./components/account-overview";
 import { MarketSidebar } from "./components/market-sidebar";
 import { OnboardingWizard } from "./components/onboarding/onboarding-wizard";
 import { ChartPanel } from "./components/chart-panel";
-import { EducationPanel } from "./components/education-panel";
 import { OrderflowPanel } from "./components/orderflow-panel";
 import { PositionsPanel } from "./components/positions-panel";
 import { TradingTicket } from "./components/trading-ticket";
@@ -56,7 +55,6 @@ function App() {
               <div className="grid gap-6">
                 <PositionsPanel />
                 {showPro ? <OrderflowPanel /> : null}
-                {showPro ? <EducationPanel /> : null}
               </div>
               <div className="grid gap-6" ref={ticketRef}>
                 <TradingTicket />
@@ -64,7 +62,6 @@ function App() {
                   onJumpToTicket={() => ticketRef.current?.scrollIntoView({ behavior: "smooth" })}
                   onJumpToRisk={() => riskRef.current?.scrollIntoView({ behavior: "smooth" })}
                 />
-                {!showPro ? <EducationPanel /> : null}
               </div>
             </div>
           </div>

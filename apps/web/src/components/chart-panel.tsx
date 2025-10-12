@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import {
   Area,
   AreaChart,
@@ -9,20 +11,75 @@ import {
 } from "recharts";
 
 import { priceSeries } from "../data/mock";
+import { usePlanMetrics } from "../hooks/usePlanMetrics";
+import { useMarketData } from "../providers/market-data";
+import { formatDecimal } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Separator } from "./ui/separator";
 
 export function ChartPanel() {
+  const { selection, metrics } = usePlanMetrics();
+  const { markets } = useMarketData();
+
+  const market = useMemo(() => {
+    if (metrics.marketSymbol) {
+      return markets.find(
+        (item) => item.symbol.toUpperCase() === metrics.marketSymbol?.toUpperCase()
+      );
+    }
+    if (selection.coinSymbol) {
+      const candidates = [
+        `${selection.coinSymbol.toUpperCase()}-USDT`,
+        `${selection.coinSymbol.toUpperCase()}-USDC`,
+        `${selection.coinSymbol.toUpperCase()}-USD`
+      ];
+      return markets.find((item) =>
+        candidates.some((symbol) => item.symbol.toUpperCase() === symbol)
+      );
+    }
+    return markets[0];
+  }, [markets, metrics.marketSymbol, selection.coinSymbol]);
+
+  const symbolLabel =
+    market?.symbol ??
+    (selection.coinSymbol ? `${selection.coinSymbol.toUpperCase()}-USDT` : "ETH-USDT");
+
+  const markPrice = market?.markPrice ?? metrics.markPrice ?? null;
+  const fundingRate = market?.fundingRate ?? metrics.fundingRate ?? 0;
+  const change24h = market?.change24h ?? 0;
+
+  const markDisplay = markPrice
+    ? formatDecimal(markPrice, {
+        minimumFractionDigits: markPrice < 1 ? 4 : 2,
+        maximumFractionDigits: markPrice < 1 ? 6 : 2
+      })
+    : "—";
+  const fundingDisplay = formatDecimal(fundingRate * 100, {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3
+  });
+  const changeDisplay = formatDecimal(change24h, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    fallback: "0.00"
+  });
+
   return (
     <Card className="flex flex-col gap-4">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>ETH-USDC Perpetual</CardTitle>
+          <CardTitle>{symbolLabel} Perpetual</CardTitle>
           <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-            <span>Mark 3,215.34</span>
-            <Badge variant="bull">+1.87%</Badge>
-            <span>Funding +0.015%</span>
+            <span>Mark {markDisplay}</span>
+            <Badge variant={change24h >= 0 ? "bull" : "bear"}>
+              {change24h >= 0 ? "+" : ""}
+              {changeDisplay}%
+            </Badge>
+            <span>
+              Funding {fundingRate >= 0 ? "+" : ""}
+              {fundingDisplay}%
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

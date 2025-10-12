@@ -1,8 +1,10 @@
 import { binancePerpProvider } from "./binance-perp";
+import { syntheticIndexProvider } from "./synthetic";
 import { MarketProvider } from "./types";
 
 const providers: Record<string, MarketProvider> = {
-  "binance-perp": binancePerpProvider
+  "binance-perp": binancePerpProvider,
+  "synthetic-index": syntheticIndexProvider
 };
 
 export function getProvider(key: string): MarketProvider {

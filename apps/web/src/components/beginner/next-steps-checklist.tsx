@@ -2,6 +2,7 @@ import { CheckCircle2, Shield, Target, Zap } from "lucide-react";
 
 import { usePlanMetrics } from "../../hooks/usePlanMetrics";
 import { useOnboarding } from "../../providers/onboarding";
+import { formatDecimal } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
@@ -30,9 +31,11 @@ export function NextStepsChecklist({
   const items: ChecklistItem[] = [
     {
       title: "Fund your position",
-      description: `Make sure at least ${selection.stake?.toLocaleString(undefined, {
-        maximumFractionDigits: 2
-      }) ?? 0} USDT sits in available balance before placing the order.`,
+      description: `Make sure at least ${formatDecimal(selection.stake, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        fallback: "0.00"
+      })} USDT sits in available balance before placing the order.`,
       icon: Zap,
       action: onJumpToTicket
         ? { label: "Go to ticket", onClick: onJumpToTicket }
@@ -40,7 +43,10 @@ export function NextStepsChecklist({
     },
     {
       title: "Add a safety stop",
-      description: `Set a stop-loss near ${selection.predictionDirection === "long" ? ">" : "<"} $${liquidationBuffer.toFixed(2)} to stay clear of liquidation.`,
+      description: `Set a stop-loss near ${selection.predictionDirection === "long" ? ">" : "<"} $${formatDecimal(liquidationBuffer, {
+        minimumFractionDigits: liquidationBuffer < 1 ? 4 : 2,
+        maximumFractionDigits: liquidationBuffer < 1 ? 6 : 2
+      })} to stay clear of liquidation.`,
       icon: Shield,
       action: onJumpToRisk ? { label: "View risk", onClick: onJumpToRisk } : undefined
     },

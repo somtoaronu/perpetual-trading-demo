@@ -108,6 +108,7 @@ export function MarketDataProvider({ children }: { children: ReactNode }) {
   return <MarketDataContext.Provider value={value}>{children}</MarketDataContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useMarketData() {
   const context = useContext(MarketDataContext);
   if (!context) {

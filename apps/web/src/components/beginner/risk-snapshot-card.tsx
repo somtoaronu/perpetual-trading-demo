@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { AlertTriangle, TrendingDown, TrendingUp } from "lucide-react";
 
 import { usePlanMetrics } from "../../hooks/usePlanMetrics";
-import { useOnboarding } from "../../providers/onboarding";
+import { formatDecimal } from "../../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
 
@@ -14,12 +14,6 @@ export function RiskSnapshotCard() {
   const { metrics, selection } = usePlanMetrics();
   const [movePct, setMovePct] = useState(metrics.movePct ?? 0.02);
   const direction = selection.predictionDirection ?? "long";
-
-  const derived = useMemo(() => {
-    const pnlUp = projectScenario(true);
-    const pnlDown = projectScenario(false);
-    return { pnlUp, pnlDown };
-  }, [movePct, metrics, direction]);
 
   function projectScenario(positive: boolean) {
     const signedMove = positive ? movePct : -movePct;
@@ -41,30 +35,50 @@ export function RiskSnapshotCard() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Metric
             label="Position Notional"
-            value={`$${metrics.notional.toLocaleString(undefined, {
+            value={`$${formatDecimal(metrics.notional, {
+              minimumFractionDigits: 2,
               maximumFractionDigits: 2
             })}`}
-            description={`${selection.stake?.toLocaleString(undefined, {
+            description={`${formatDecimal(selection.stake, {
+              minimumFractionDigits: 2,
               maximumFractionDigits: 2
-            }) ?? 0} USDT × ${selection.leverage?.toFixed(1) ?? 1}× leverage`}
+            })} USDT × ${formatDecimal(selection.leverage, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1
+            })}× leverage`}
           />
           <Metric
             label="Estimated Liquidation"
-            value={`$${metrics.liquidationPrice.toFixed(2)}`}
+            value={`$${formatDecimal(metrics.liquidationPrice, {
+              minimumFractionDigits: metrics.liquidationPrice < 1 ? 4 : 2,
+              maximumFractionDigits: metrics.liquidationPrice < 1 ? 6 : 2
+            })}`}
             description="Approximation using 0.6% maintenance margin"
             intent="danger"
           />
           <Metric
             label="Target Mark"
-            value={`$${metrics.targetPrice.toFixed(2)}`}
-            description={`${(movePct * 100).toFixed(1)}% move ${direction === "long" ? "upward" : "downward"}`}
+            value={`$${formatDecimal(metrics.targetPrice, {
+              minimumFractionDigits: metrics.targetPrice < 1 ? 4 : 2,
+              maximumFractionDigits: metrics.targetPrice < 1 ? 6 : 2
+            })}`}
+            description={`${formatDecimal(movePct * 100, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1
+            })}% move ${direction === "long" ? "upward" : "downward"}`}
           />
         </div>
         <Separator />
         <div className="space-y-4">
           <header className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
             <span>Scenario Range</span>
-            <span>{(movePct * 100).toFixed(1)}% move</span>
+            <span>
+              {formatDecimal(movePct * 100, {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1
+              })}
+              % move
+            </span>
           </header>
           <input
             type="range"
@@ -79,13 +93,13 @@ export function RiskSnapshotCard() {
             <ScenarioCard
               icon={TrendingUp}
               label="If price moves in your favour"
-              amount={derived.pnlUp}
+              amount={projectScenario(true)}
               positive
             />
             <ScenarioCard
               icon={TrendingDown}
               label="If price moves against you"
-              amount={derived.pnlDown}
+              amount={projectScenario(false)}
               positive={false}
             />
           </div>
@@ -138,7 +152,10 @@ function ScenarioCard({
   positive: boolean;
 }) {
   const colour = positive ? "text-bull" : "text-bear";
-  const formatted = `$${amount.toFixed(2)}`;
+  const formatted = `$${formatDecimal(amount, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
   return (
     <div className="rounded-lg border border-border/40 bg-background/70 p-4">
       <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">

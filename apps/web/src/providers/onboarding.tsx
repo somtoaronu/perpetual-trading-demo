@@ -221,6 +221,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOnboarding() {
   const context = useContext(OnboardingContext);
   if (!context) {

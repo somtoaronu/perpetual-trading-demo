@@ -1,6 +1,7 @@
 import { Activity, ArrowUpRight, CircleDot, Loader2 } from "lucide-react";
 
 import { useMarketData } from "../providers/market-data";
+import { formatDecimal } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
@@ -46,20 +47,44 @@ export function MarketSidebar() {
                   <div>
                     <p className="text-sm font-medium">{market.symbol}</p>
                     <p className="text-xs text-muted-foreground">
-                      OI ${(market.openInterest / 1_000_000).toFixed(1)}M · 24h vol $
-                      {(market.volume24h / 1_000_000).toFixed(1)}M
+                      OI $
+                      {formatDecimal(market.openInterest / 1_000_000, {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1
+                      })}
+                      M · 24h vol $
+                      {formatDecimal(market.volume24h / 1_000_000, {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1
+                      })}
+                      M
                     </p>
                   </div>
                   <Badge variant={market.change24h >= 0 ? "bull" : "bear"}>
                     {market.change24h >= 0 ? "+" : ""}
-                    {market.change24h.toFixed(2)}%
+                    {formatDecimal(market.change24h, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                    %
                   </Badge>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Mark {market.markPrice.toLocaleString()}</span>
+                  <span>
+                    Mark{" "}
+                    {formatDecimal(market.markPrice, {
+                      minimumFractionDigits: market.markPrice < 1 ? 4 : 2,
+                      maximumFractionDigits: market.markPrice < 1 ? 6 : 2
+                    })}
+                  </span>
                   <span className="flex items-center gap-1">
                     <CircleDot className="h-3 w-3 text-accent" />
-                    Funding {(market.fundingRate * 100).toFixed(3)}%
+                    Funding{" "}
+                    {formatDecimal(market.fundingRate * 100, {
+                      minimumFractionDigits: 3,
+                      maximumFractionDigits: 3
+                    })}
+                    %
                   </span>
                 </div>
               </li>

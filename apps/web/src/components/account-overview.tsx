@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { positions } from "../data/mock";
+import { formatDecimal } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Separator } from "./ui/separator";
@@ -31,20 +32,45 @@ export function AccountOverview() {
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Metric label="Equity" value={`$${totals.equity.toLocaleString()}`} />
-          <Metric label="Margin Used" value={`$${totals.marginUsed.toLocaleString()}`} />
+          <Metric
+            label="Equity"
+            value={`$${formatDecimal(totals.equity, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            })}`}
+          />
+          <Metric
+            label="Margin Used"
+            value={`$${formatDecimal(totals.marginUsed, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            })}`}
+          />
           <Metric
             label="Unrealized PnL"
-            value={`$${totals.unrealized.toFixed(2)}`}
+            value={`$${formatDecimal(totals.unrealized, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}`}
             trend="bull"
           />
-          <Metric label="Funding (24h)" value={`$${totals.funding.toFixed(2)}`} trend="bear" />
+          <Metric
+            label="Funding (24h)"
+            value={`$${formatDecimal(totals.funding, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}`}
+            trend="bear"
+          />
         </div>
         <Separator />
         <div>
           <header className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
             <span>Scenario Simulator</span>
-            <span>{priceDelta.toFixed(1)}% move</span>
+            <span>{formatDecimal(priceDelta, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1
+            })}% move</span>
           </header>
           <input
             type="range"
@@ -56,9 +82,17 @@ export function AccountOverview() {
             className="mt-2 w-full accent-primary"
           />
           <p className="mt-3 text-sm text-muted-foreground">
-            Expected PnL if mark price shifts {priceDelta.toFixed(1)}%:{" "}
+            Expected PnL if mark price shifts{" "}
+            {formatDecimal(priceDelta, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1
+            })}
+            %:{" "}
             <span className={projectedPnl >= 0 ? "text-bull" : "text-bear"}>
-              ${projectedPnl.toFixed(2)}
+              ${formatDecimal(projectedPnl, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}
             </span>
           </p>
         </div>

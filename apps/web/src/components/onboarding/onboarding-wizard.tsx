@@ -27,7 +27,7 @@ import {
   CardHeader,
   CardTitle
 } from "../ui/card";
-import { cn } from "../../lib/utils";
+import { cn, formatDecimal } from "../../lib/utils";
 import { useCoinPrices } from "../../hooks/useCoinPrices";
 import { submitOnboardingPlan } from "../../lib/onboarding-api";
 
@@ -592,8 +592,9 @@ function CoinStep({
                 <div className="flex items-baseline gap-2 text-foreground">
                   <span className="text-lg font-semibold">
                     {typeof price === "number"
-                      ? `$${price.toLocaleString(undefined, {
-                          maximumFractionDigits: price > 5 ? 2 : 4
+                      ? `$${formatDecimal(price, {
+                          minimumFractionDigits: price > 5 ? 2 : 4,
+                          maximumFractionDigits: price > 5 ? 2 : 6
                         })}`
                       : "—"}
                   </span>
@@ -689,7 +690,11 @@ function PlanStep({
                   className="flex-1"
                 />
                 <span className="w-12 text-right text-base text-foreground">
-                  {leverage}x
+                  {formatDecimal(leverage, {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1
+                  })}
+                  x
                 </span>
               </div>
               <span className="text-xs text-muted-foreground/80">
@@ -824,11 +829,15 @@ function ReviewStep({
     },
     {
       label: "Leverage",
-      value: `${leverage}x`
+      value: `${formatDecimal(leverage, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      })}x`
     },
     {
       label: "Stake",
-      value: `${stake.toLocaleString(undefined, {
+      value: `${formatDecimal(stake, {
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2
       })} USDT`
     },

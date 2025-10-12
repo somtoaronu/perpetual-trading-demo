@@ -1,4 +1,5 @@
 import { positions } from "../data/mock";
+import { formatDecimal } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
@@ -41,18 +42,49 @@ export function PositionsPanel() {
                       {position.side}
                     </Badge>
                   </TableCell>
-                  <TableCell>{position.size}</TableCell>
-                  <TableCell>{position.entryPrice.toFixed(2)}</TableCell>
-                  <TableCell>{position.markPrice.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {formatDecimal(position.size, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    {formatDecimal(position.entryPrice, {
+                      minimumFractionDigits: position.entryPrice < 1 ? 4 : 2,
+                      maximumFractionDigits: position.entryPrice < 1 ? 6 : 2
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    {formatDecimal(position.markPrice, {
+                      minimumFractionDigits: position.markPrice < 1 ? 4 : 2,
+                      maximumFractionDigits: position.markPrice < 1 ? 6 : 2
+                    })}
+                  </TableCell>
                   <TableCell>{position.leverage}x</TableCell>
-                  <TableCell>{position.liqPrice.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {formatDecimal(position.liqPrice, {
+                      minimumFractionDigits: position.liqPrice < 1 ? 4 : 2,
+                      maximumFractionDigits: position.liqPrice < 1 ? 6 : 2
+                    })}
+                  </TableCell>
                   <TableCell className={position.pnl >= 0 ? "text-bull" : "text-bear"}>
                     {position.pnl >= 0 ? "+" : ""}
-                    {position.pnl.toFixed(2)} ({position.pnlPct.toFixed(2)}%)
+                    {formatDecimal(position.pnl, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}{" "}
+                    ({formatDecimal(position.pnlPct, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                    %)
                   </TableCell>
                   <TableCell className={position.funding >= 0 ? "text-bull" : "text-bear"}>
                     {position.funding >= 0 ? "+" : ""}
-                    {position.funding.toFixed(2)}
+                    {formatDecimal(position.funding, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
                   </TableCell>
                 </TableRow>
               ))}

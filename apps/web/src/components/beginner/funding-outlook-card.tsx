@@ -2,7 +2,7 @@ import { differenceInMinutes, format, addMinutes } from "date-fns";
 import { PiggyBank, TimerReset } from "lucide-react";
 
 import { usePlanMetrics } from "../../hooks/usePlanMetrics";
-import { useOnboarding } from "../../providers/onboarding";
+import { formatDecimal } from "../../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
 
@@ -37,12 +37,23 @@ export function FundingOutlookCard() {
             <span>Projected impact</span>
           </div>
           <p className={`mt-3 text-2xl font-semibold ${isCredit ? "text-bull" : "text-bear"}`}>
-            {isCredit ? "+" : "-"}${Math.abs(fundingImpact).toFixed(2)}
+            {isCredit ? "+" : "-"}${formatDecimal(Math.abs(fundingImpact), {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Based on {selection.leverage?.toFixed(1) ?? 1}× leverage over{" "}
+            Based on {formatDecimal(selection.leverage, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+              fallback: "1.0"
+            })}× leverage over{" "}
             {formatMinutes(evaluationMinutes)} at a funding rate of{" "}
-            {(metrics.fundingRate * 100).toFixed(3)}%.
+            {formatDecimal(metrics.fundingRate * 100, {
+              minimumFractionDigits: 3,
+              maximumFractionDigits: 3,
+              fallback: "0.000"
+            })}%.
           </p>
         </div>
         <Separator />

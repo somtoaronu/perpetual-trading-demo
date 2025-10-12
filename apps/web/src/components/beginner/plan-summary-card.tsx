@@ -3,6 +3,7 @@ import { ArrowRight, Clock, RefreshCw, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 import { coinGuides, platformGuides } from "../../data/onboarding";
+import { formatDecimal } from "../../lib/utils";
 import { useOnboarding } from "../../providers/onboarding";
 import { usePlanMetrics } from "../../hooks/usePlanMetrics";
 import { Badge } from "../ui/badge";
@@ -52,11 +53,15 @@ export function PlanSummaryCard() {
           <SummaryItem label="Direction" value={directionCopy} highlight={selection.predictionDirection} />
           <SummaryItem
             label="Leverage"
-            value={`${selection.leverage?.toFixed(1) ?? "—"}×`}
+            value={`${formatDecimal(selection.leverage, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1
+            })}×`}
           />
           <SummaryItem
             label="Stake"
-            value={`${selection.stake?.toLocaleString(undefined, {
+            value={`${formatDecimal(selection.stake, {
+              minimumFractionDigits: 2,
               maximumFractionDigits: 2
             })} USDT`}
           />
@@ -72,10 +77,13 @@ export function PlanSummaryCard() {
             <span>Last saved {lastSaved}</span>
           </div>
           {metrics.marketSymbol ? (
-            <Badge variant="secondary" className="gap-1">
+            <Badge variant="outline" className="gap-1">
               {metrics.marketSymbol}
               <ArrowRight className="h-3 w-3" />
-              Mark ${metrics.markPrice.toFixed(2)}
+              Mark ${formatDecimal(metrics.markPrice, {
+                minimumFractionDigits: metrics.markPrice < 1 ? 4 : 2,
+                maximumFractionDigits: metrics.markPrice < 1 ? 6 : 2
+              })}
             </Badge>
           ) : null}
         </div>
