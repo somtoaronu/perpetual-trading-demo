@@ -1,11 +1,13 @@
-import { Activity, ArrowUpRight, CircleDot } from "lucide-react";
+import { Activity, ArrowUpRight, CircleDot, Loader2 } from "lucide-react";
 
-import { markets } from "../data/mock";
+import { useMarketData } from "../providers/market-data";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 
 export function MarketSidebar() {
+  const { markets, loading, error } = useMarketData();
+
   return (
     <aside className="hidden w-72 border-r border-border/40 bg-muted/10 lg:flex lg:flex-col">
       <div className="px-5 py-4">
@@ -16,37 +18,54 @@ export function MarketSidebar() {
           </Badge>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Synthetic Mark &amp; Index prices update every few seconds.
+          Live mark, index, and funding data sourced from public exchange APIs.
         </p>
+        {loading ? (
+          <div className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Updating…
+          </div>
+        ) : null}
+        {error ? (
+          <p className="mt-3 text-xs text-destructive">
+            {error}. We’ll keep trying in the background.
+          </p>
+        ) : null}
       </div>
       <Separator />
       <ScrollArea className="flex-1">
-        <ul className="divide-y divide-border/40">
-          {markets.map((market) => (
-            <li key={market.symbol} className="p-4 transition hover:bg-muted/30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{market.symbol}</p>
-                  <p className="text-xs text-muted-foreground">
-                    OI ${(market.openInterest / 1_000_000).toFixed(1)}M · 24h vol $
-                    {(market.volume24h / 1_000_000).toFixed(1)}M
-                  </p>
+        {markets.length === 0 && !loading ? (
+          <div className="p-4 text-xs text-muted-foreground">
+            No market data available yet. Check your data service configuration.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border/40">
+            {markets.map((market) => (
+              <li key={market.symbol} className="p-4 transition hover:bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{market.symbol}</p>
+                    <p className="text-xs text-muted-foreground">
+                      OI ${(market.openInterest / 1_000_000).toFixed(1)}M · 24h vol $
+                      {(market.volume24h / 1_000_000).toFixed(1)}M
+                    </p>
+                  </div>
+                  <Badge variant={market.change24h >= 0 ? "bull" : "bear"}>
+                    {market.change24h >= 0 ? "+" : ""}
+                    {market.change24h.toFixed(2)}%
+                  </Badge>
                 </div>
-                <Badge variant={market.change24h >= 0 ? "bull" : "bear"}>
-                  {market.change24h >= 0 ? "+" : ""}
-                  {market.change24h.toFixed(2)}%
-                </Badge>
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Mark {market.markPrice.toLocaleString()}</span>
-                <span className="flex items-center gap-1">
-                  <CircleDot className="h-3 w-3 text-accent" />
-                  Funding {(market.fundingRate * 100).toFixed(3)}%
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Mark {market.markPrice.toLocaleString()}</span>
+                  <span className="flex items-center gap-1">
+                    <CircleDot className="h-3 w-3 text-accent" />
+                    Funding {(market.fundingRate * 100).toFixed(3)}%
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </ScrollArea>
       <Separator />
       <div className="px-5 py-4 text-xs text-muted-foreground">

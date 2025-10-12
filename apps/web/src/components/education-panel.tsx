@@ -1,11 +1,15 @@
 import { BookOpen, GraduationCap } from "lucide-react";
 
 import { fundingEvents, tutorialSteps } from "../data/mock";
+import { usePlanMetrics } from "../hooks/usePlanMetrics";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Separator } from "./ui/separator";
+import { PlanTimeline } from "./beginner/plan-timeline";
 
 export function EducationPanel() {
+  const { selection } = usePlanMetrics();
+
   return (
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -62,6 +66,7 @@ export function EducationPanel() {
             classroom-friendly timeline.
           </p>
         </div>
+        {selection.platformId ? <PlanTimeline /> : null}
       </CardContent>
     </Card>
   );

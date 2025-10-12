@@ -79,6 +79,14 @@ Learning path:
 mongosh "$mongoUri" --eval 'db.onboardingPlans.createIndex({ walletAddress: 1 }, { unique: true })'
 ```
 
+### 8. Beginner Outlook Experience
+- **Plan Summary Card:** Show the saved onboarding plan in plain language (platform, coin, direction, leverage, stake, evaluation window) with status pills and a quick “Edit Plan” action that reopens onboarding.
+- **Risk Snapshot:** Calculate notional size, estimated liquidation price, and +/- scenario PnL for a configurable price move (default 2%). Highlight results with accessible colour coding and supporting copy.
+- **Funding Outlook:** Project the funding credit/debit over the learner’s evaluation window using the current mock funding rate. Include time-to-next cycle and plain-language guidance.
+- **Next Steps Checklist:** Provide three actionable steps (fund account, set stop-loss, monitor funding timer) with links or scroll-to actions pointing to the relevant UI modules.
+- **Timeline Narrative:** Insert a mini timeline in the education panel describing what the learner should check at entry, mid-window, and wrap-up based on their plan.
+- **Layout Priorities:** Beginner cards must occupy the first viewport row on the dashboard, with advanced widgets (order book, depth) tucked behind an optional “Pro View” toggle.
+
 ### 8. Technical Architecture
 - **Monorepo Layout:** `apps/web` (Vite React), `apps/mock-server`, `packages/ui` (shared shadcn components), `contracts` (Hardhat).
 - **State Management:** Zustand with selectors; React Query for server sync.
@@ -102,9 +110,10 @@ mongosh "$mongoUri" --eval 'db.onboardingPlans.createIndex({ walletAddress: 1 },
 2. **Phase 1 – Web Shell:** Scaffold layout, global state, mock data adapters, wallet connect.
 3. **Phase 2 – Trading Modules:** Implement order book, trades feed, tickets, positions, analytics.
 4. **Phase 2.5 – Onboarding API:** Wire Express + Mongo persistence, add health checks, and connect the wizard submit/retrieve flows.
-5. **Phase 3 – Education Layer:** Guided tour, glossary, scenario simulator.
-6. **Phase 4 – Contracts & Integration:** Deploy placeholder contracts locally, wire minimal read/write using MetaMask.
-7. **Phase 5 – Polish:** Responsive tweaks, theming, documentation, handoff notes.
+5. **Phase 3 – Beginner Outlook Dashboard:** Implement plan summary, risk snapshot, funding outlook, checklist, and timeline narrative.
+6. **Phase 4 – Education Layer:** Guided tour, glossary, scenario simulator.
+7. **Phase 5 – Contracts & Integration:** Deploy placeholder contracts locally, wire minimal read/write using MetaMask.
+8. **Phase 6 – Polish:** Responsive tweaks, theming, documentation, handoff notes.
 
 ### 12. Risks & Open Items
 - **Market Authenticity:** Mock data must feel realistic; calibrate volatility to avoid implausible spikes.
@@ -112,6 +121,7 @@ mongosh "$mongoUri" --eval 'db.onboardingPlans.createIndex({ walletAddress: 1 },
 - **Education Depth:** Ensure advanced content aligns with Aster feature set (e.g., equity perps, multi-asset margin).citeturn0search7
 - **Future Integration:** Plan upgrade path for real oracle feeds and execution once contracts mature.
 - **Persistence Reliability:** Missing Mongo connectivity currently drops users back on the generic index; add smoke tests and monitoring to prevent silent regressions.
+- **Beginner Accuracy:** Risk and funding projections rely on simplified formulas; verify copy emphasises assumptions to avoid over-promising.
 
 ### 13. Deliverables Checklist
 - Updated `REQUIREMENTS.md` (this document).
@@ -120,3 +130,4 @@ mongosh "$mongoUri" --eval 'db.onboardingPlans.createIndex({ walletAddress: 1 },
 - UI components matching reference layouts.
 - Mock trading flow demonstrating Simple + Pro modes and education overlay.
 - Onboarding persistence service wired to Mongo with documented schema, seed script, and health checks.
+- Beginner Outlook dashboard components explaining expected risk/reward and next steps.
