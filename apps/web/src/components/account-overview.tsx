@@ -363,21 +363,37 @@ export function AccountOverview() {
             Funding Outlook
           </p>
           <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-3">
-            <div className="flex items-center justify-between rounded-md border border-border/30 bg-background/80 px-3 py-2">
-              <span>Current Rate</span>
-              <Badge variant={outlookValues.currentRate >= 0 ? "bull" : "bear"}>
+            <div className="flex flex-col gap-2 rounded-md border border-border/30 bg-background/80 px-4 py-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Current Rate
+              </span>
+              <Badge variant={outlookValues.currentRate >= 0 ? "bull" : "bear"} className="w-fit">
                 {fundingRateDisplay}
               </Badge>
             </div>
-            <div className="flex items-center justify-between rounded-md border border-border/30 bg-background/80 px-3 py-2">
-              <span>Next Cycle Impact</span>
-              <span className={outlookValues.nextImpact >= 0 ? "text-bull" : "text-bear"}>
+            <div className="flex flex-col gap-2 rounded-md border border-border/30 bg-background/80 px-4 py-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Next Cycle Impact
+              </span>
+              <span
+                className={cn(
+                  "text-base font-semibold",
+                  outlookValues.nextImpact >= 0 ? "text-bull" : "text-bear"
+                )}
+              >
                 {nextImpactDisplay}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-md border border-border/30 bg-background/80 px-3 py-2">
-              <span>Fair Price Basis</span>
-              <span className={outlookValues.basis >= 0 ? "text-bull" : "text-bear"}>
+            <div className="flex flex-col gap-2 rounded-md border border-border/30 bg-background/80 px-4 py-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Fair Price Basis
+              </span>
+              <span
+                className={cn(
+                  "text-base font-semibold",
+                  outlookValues.basis >= 0 ? "text-bull" : "text-bear"
+                )}
+              >
                 {basisDisplay}
               </span>
             </div>
