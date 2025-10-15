@@ -9,6 +9,7 @@ import { PlanSummaryCard } from "./components/beginner/plan-summary-card";
 import { RiskSnapshotCard } from "./components/beginner/risk-snapshot-card";
 import { FundingOutlookCard } from "./components/beginner/funding-outlook-card";
 import { NextStepsChecklist } from "./components/beginner/next-steps-checklist";
+import { FeedbackPanel } from "./components/feedback-panel";
 import { useOnboarding } from "./providers/onboarding";
 
 function App() {
@@ -37,9 +38,12 @@ function App() {
               <ChartPanel />
               <FundingOutlookCard />
             </div>
-            <NextStepsChecklist
-              onJumpToRisk={() => riskRef.current?.scrollIntoView({ behavior: "smooth" })}
-            />
+            <div className="grid gap-6 xl:grid-cols-2">
+              <NextStepsChecklist
+                onJumpToRisk={() => riskRef.current?.scrollIntoView({ behavior: "smooth" })}
+              />
+              <FeedbackPanel />
+            </div>
           </div>
         </main>
       </div>
