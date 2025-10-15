@@ -17,10 +17,8 @@ type ChecklistItem = {
 };
 
 export function NextStepsChecklist({
-  onJumpToTicket,
   onJumpToRisk
 }: {
-  onJumpToTicket?: () => void;
   onJumpToRisk?: () => void;
 }) {
   const { selection, metrics } = usePlanMetrics();
@@ -36,10 +34,7 @@ export function NextStepsChecklist({
         maximumFractionDigits: 2,
         fallback: "0.00"
       })} USDT sits in available balance before placing the order.`,
-      icon: Zap,
-      action: onJumpToTicket
-        ? { label: "Go to ticket", onClick: onJumpToTicket }
-        : undefined
+      icon: Zap
     },
     {
       title: "Add a safety stop",
