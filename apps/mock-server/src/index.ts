@@ -1,11 +1,12 @@
 import cors from "cors";
 import dotenv from "dotenv";
-import express, { type Response } from "express";
+import express, { type Request, type Response } from "express";
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 
+import { FeedbackStore } from "./feedback-store";
 import { OnboardingStore, type OnboardingPlanInput } from "./onboarding-store";
 import {
   getMarketsSnapshot,
@@ -31,8 +32,55 @@ if (!process.env.MONGO_URI) {
 }
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173")
+  .split(/[,\s]+/)
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.length === 0) {
+        callback(null, true);
+        return;
+      }
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Origin not allowed by CORS policy"));
+      }
+    },
+    credentials: true
+  })
+);
+
+app.use(
+  express.json({
+    limit: "1mb",
+    verify: (req, _res, buf) => {
+      // Prevent null byte poisoning
+      if (buf.includes(0)) {
+        throw new Error("Invalid request payload");
+      }
+    }
+  })
+);
+
+const requiredApiKey = process.env.MOCK_SERVER_API_KEY ?? process.env.API_KEY ?? null;
+
+function requireApiKey(req: Request, res: Response, next: () => void) {
+  if (!requiredApiKey) {
+    next();
+    return;
+  }
+  const provided = req.get("x-api-key") ?? req.query.apiKey;
+  if (provided !== requiredApiKey) {
+    res.status(401).json({ error: "Missing or invalid API key" });
+    return;
+  }
+  next();
+}
 
 const positions = [
   {
@@ -46,10 +94,19 @@ const positions = [
   }
 ];
 
+const ONBOARDING_COLLECTION = "onboardingPlans";
+const FEEDBACK_COLLECTION = "feedbacks";
+
 const onboardingStore = new OnboardingStore({
   mongoUri: process.env.MONGO_URI,
   dbName: process.env.MONGO_DB_NAME,
-  collectionName: process.env.MONGO_COLLECTION ?? process.env.MONGO_COLLECTION_NAME
+  collectionName: ONBOARDING_COLLECTION
+});
+
+const feedbackStore = new FeedbackStore({
+  mongoUri: process.env.MONGO_URI,
+  dbName: process.env.MONGO_DB_NAME,
+  collectionName: FEEDBACK_COLLECTION
 });
 
 startMarketPolling();
@@ -106,7 +163,7 @@ app.get("/api/onboarding/:walletAddress", async (req, res) => {
   }
 });
 
-app.post("/api/onboarding", async (req, res) => {
+app.post("/api/onboarding", requireApiKey, async (req, res) => {
   if (!ensureStoreReady(res)) {
     return;
   }
@@ -129,7 +186,7 @@ app.post("/api/onboarding", async (req, res) => {
   }
 });
 
-app.post("/orders", (req, res) => {
+app.post("/orders", requireApiKey, (req, res) => {
   res.json({
     id: `order-${Date.now()}`,
     status: "filled",
@@ -137,8 +194,43 @@ app.post("/orders", (req, res) => {
   });
 });
 
-app.delete("/orders/:id", (req, res) => {
+app.delete("/orders/:id", requireApiKey, (req, res) => {
   res.json({ id: req.params.id, status: "cancelled" });
+});
+
+app.post("/feedback", requireApiKey, async (req, res) => {
+  if (!ensureFeedbackReady(res)) {
+    return;
+  }
+
+  const { feedback, errors } = validateFeedbackPayload(req.body, req);
+  if (!feedback || errors.length > 0) {
+    res.status(400).json({ error: "Invalid feedback payload.", details: errors });
+    return;
+  }
+
+  try {
+    await feedbackStore.insert(feedback);
+    res.status(201).json({ status: "received" });
+  } catch (error) {
+    console.error("[server] Failed to save feedback:", error);
+    res.status(500).json({ error: "Failed to save feedback." });
+  }
+});
+
+// Centralised error handler for parsing / auth issues
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, _req: Request, res: Response, _next: () => void) => {
+  console.error("[server] Request error", err.message);
+  if (err.message === "Invalid request payload") {
+    res.status(400).json({ error: "Invalid request payload" });
+    return;
+  }
+  if (err.message.includes("CORS")) {
+    res.status(403).json({ error: "Origin not allowed" });
+    return;
+  }
+  res.status(500).json({ error: "Unexpected server error" });
 });
 
 const httpServer = createServer(app);
@@ -173,12 +265,17 @@ const PORT = Number(process.env.PORT ?? process.env.SERVER_PORT ?? 4000);
 
 async function bootstrap() {
   await onboardingStore.init();
+  await feedbackStore.init();
   const status = onboardingStore.status();
   if (!status.ready) {
     console.warn(
       "[server] Onboarding persistence disabled:",
       status.error ?? "No mongoUri configured."
     );
+  }
+
+  if (!feedbackStore.isReady()) {
+    console.warn("[server] Feedback persistence disabled: feedback will be stored in-memory only.");
   }
 
   httpServer.listen(PORT, () => {
@@ -193,11 +290,13 @@ bootstrap().catch((error) => {
 
 process.on("SIGINT", async () => {
   await onboardingStore.close();
+  await feedbackStore.close();
   process.exit(0);
 });
 
 process.on("SIGTERM", async () => {
   await onboardingStore.close();
+  await feedbackStore.close();
   process.exit(0);
 });
 
@@ -213,8 +312,17 @@ function ensureStoreReady(res: Response): boolean {
   return false;
 }
 
+function ensureFeedbackReady(_res: Response): boolean {
+  if (feedbackStore.isReady()) {
+    return true;
+  }
+  return true;
+}
+
 const ALLOWED_EVALUATION_WINDOWS = new Set(["1h", "4h", "12h", "24h"]);
 const ALLOWED_DIRECTIONS = new Set(["long", "short"]);
+
+const ALLOWED_SENTIMENTS = new Set(["excellent", "good", "average", "poor"]);
 
 function validateOnboardingPayload(body: unknown): {
   plan?: OnboardingPlanInput;
@@ -286,6 +394,80 @@ function validateOnboardingPayload(body: unknown): {
   };
 
   return { plan, errors };
+}
+
+function validateFeedbackPayload(body: unknown, req: Request): {
+  feedback?: {
+    email?: string | null;
+    sentiment?: string | null;
+    notes: string;
+    userAgent?: string | null;
+    ipAddress?: string | null;
+  };
+  errors: string[];
+} {
+  const errors: string[] = [];
+  if (!body || typeof body !== "object") {
+    errors.push("Request body must be an object.");
+    return { errors };
+  }
+
+  const payload = body as Record<string, unknown>;
+
+  let email: string | null = null;
+  const rawEmail = coerceString(payload.email);
+  if (rawEmail) {
+    const trimmed = rawEmail.slice(0, 120);
+    const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    if (!emailRegex.test(trimmed)) {
+      errors.push("email must be a valid address if provided.");
+    } else {
+      email = trimmed;
+    }
+  }
+
+  let sentiment: string | null = null;
+  const rawSentiment = coerceString(payload.sentiment);
+  if (rawSentiment) {
+    const normalized = rawSentiment.toLowerCase();
+    if (!ALLOWED_SENTIMENTS.has(normalized)) {
+      errors.push(`Unsupported sentiment value: ${rawSentiment}.`);
+    } else {
+      sentiment = normalized;
+    }
+  }
+
+  const rawNotes = typeof payload.notes === "string" ? payload.notes : "";
+  const sanitizedNotes = sanitizeNotes(rawNotes);
+  if (sanitizedNotes.length === 0 && !sentiment) {
+    errors.push("notes or sentiment is required.");
+  }
+
+  if (sanitizedNotes.length > 1000) {
+    errors.push("notes must be 1000 characters or fewer.");
+  }
+
+  if (errors.length > 0) {
+    return { errors };
+  }
+
+  return {
+    feedback: {
+      email,
+      sentiment,
+      notes: sanitizedNotes,
+      userAgent: req.get("user-agent") ?? null,
+      ipAddress: req.ip ?? null
+    },
+    errors
+  };
+}
+
+function sanitizeNotes(value: string): string {
+  return value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim()
+    .slice(0, 1000);
 }
 
 function coerceString(value: unknown): string | undefined {

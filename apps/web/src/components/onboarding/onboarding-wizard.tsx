@@ -51,7 +51,11 @@ export function OnboardingWizard() {
     totalSteps,
     markCompleted,
     loading,
-    error
+    error,
+    isGuest,
+    enableGuestMode,
+    clearGuestMode,
+    guestWalletAddress
   } = useOnboarding();
   const { address, status: accountStatus } = useAccount();
   const { connect, connectors, status: connectStatus } = useConnect();
@@ -90,7 +94,9 @@ export function OnboardingWizard() {
     [selection.evaluationWindow]
   );
 
-  const isConnected = accountStatus === "connected" && !!address;
+  const hasWalletConnection = accountStatus === "connected" && !!address;
+  const isConnected = hasWalletConnection || isGuest;
+  const usingGuest = isGuest && !hasWalletConnection;
 
   const isNextDisabled = useMemo(() => {
     switch (currentStep) {
@@ -135,6 +141,18 @@ export function OnboardingWizard() {
         return;
       }
       setSubmissionError(null);
+
+      if (usingGuest) {
+        markCompleted(selection);
+        setSubmissionError(null);
+        return;
+      }
+
+      if (!address) {
+        setSubmissionError("Connect a wallet or continue as a guest to save your plan.");
+        return;
+      }
+
       setSubmitting(true);
       try {
         const result = await submitOnboardingPlan({
@@ -210,9 +228,16 @@ export function OnboardingWizard() {
             connect={connect}
             connectStatus={connectStatus}
             disconnect={disconnect}
-            isConnected={isConnected}
+            hasWalletConnection={hasWalletConnection}
+            isGuest={isGuest}
             address={address}
+            guestAddress={guestWalletAddress}
             metaMaskConnector={metaMaskConnector}
+            onContinueAsGuest={() => {
+              enableGuestMode();
+              nextStep();
+            }}
+            onExitGuest={() => clearGuestMode()}
           />
         );
       case 2:
@@ -251,6 +276,8 @@ export function OnboardingWizard() {
         return (
           <ReviewStep
             address={address}
+            guestAddress={guestWalletAddress}
+            isGuest={isGuest}
             platform={selectedPlatform}
             coin={selectedCoin}
             evaluationWindow={selectedWindow}
@@ -409,19 +436,30 @@ type WalletStepProps = {
   connect: ReturnType<typeof useConnect>["connect"];
   connectStatus: ReturnType<typeof useConnect>["status"];
   disconnect: ReturnType<typeof useDisconnect>["disconnect"];
-  isConnected: boolean;
+  hasWalletConnection: boolean;
+  isGuest: boolean;
   address?: string;
+  guestAddress?: string | null;
   metaMaskConnector?: ReturnType<typeof useConnect>["connectors"][number];
+  onContinueAsGuest: () => void;
+  onExitGuest: () => void;
 };
 
 function WalletStep({
   connect,
   connectStatus,
   disconnect,
-  isConnected,
+  hasWalletConnection,
+  isGuest,
   address,
-  metaMaskConnector
+  guestAddress,
+  metaMaskConnector,
+  onContinueAsGuest,
+  onExitGuest
 }: WalletStepProps) {
+  const guestDisplay = guestAddress
+    ? `${guestAddress.slice(0, 6)}…${guestAddress.slice(-4)}`
+    : null;
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -440,7 +478,7 @@ function WalletStep({
               recovery phrase offline. Once ready, return here and click connect.
             </p>
           </div>
-          {isConnected ? (
+          {hasWalletConnection ? (
             <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card px-4 py-3 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Wallet className="h-4 w-4 text-primary" />
@@ -451,6 +489,18 @@ function WalletStep({
               </div>
               <Button variant="outline" size="sm" onClick={() => disconnect()}>
                 Disconnect
+              </Button>
+            </div>
+          ) : isGuest ? (
+            <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-primary">
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold">Guest mode active</span>
+                {guestDisplay ? (
+                  <span className="font-mono text-xs text-primary/80">{guestDisplay}</span>
+                ) : null}
+              </div>
+              <Button variant="outline" size="sm" onClick={onExitGuest}>
+                Connect wallet
               </Button>
             </div>
           ) : (
@@ -465,6 +515,30 @@ function WalletStep({
               {connectStatus === "pending" ? "Connecting…" : "Connect MetaMask"}
             </Button>
           )}
+          {!hasWalletConnection ? (
+            isGuest ? (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-xs text-primary/80">
+                You’re exploring as a guest. Continue through onboarding or connect your wallet whenever you’re ready to save plans to an address.
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span>Just exploring? Browse the demo without connecting first.</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onContinueAsGuest}
+                    className="w-full sm:w-auto"
+                  >
+                    Browse as guest
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground/80">
+                  We’ll assign a temporary wallet address for this session so your selections stay scoped to this device.
+                </p>
+              </div>
+            )
+          ) : null}
         </CardContent>
       </Card>
     </div>
@@ -789,6 +863,8 @@ function PlanStep({
 
 type ReviewStepProps = {
   address?: string;
+  guestAddress?: string | null;
+  isGuest: boolean;
   platform?: (typeof platformGuides)[number];
   coin?: (typeof coinGuides)[number];
   evaluationWindow?: (typeof evaluationWindows)[number];
@@ -800,6 +876,8 @@ type ReviewStepProps = {
 
 function ReviewStep({
   address,
+  guestAddress,
+  isGuest,
   platform,
   coin,
   evaluationWindow,
@@ -811,7 +889,9 @@ function ReviewStep({
   const items = [
     {
       label: "Wallet",
-      value: address
+      value: isGuest
+        ? `Guest session (${guestAddress ? `${guestAddress.slice(0, 6)}…${guestAddress.slice(-4)}` : "temporary"})`
+        : address
         ? `${address.slice(0, 6)}…${address.slice(-4)}`
         : "Connect MetaMask"
     },
@@ -853,8 +933,9 @@ function ReviewStep({
         <CardHeader>
           <CardTitle>Review before submitting</CardTitle>
           <CardDescription>
-            We record the plan against your wallet so outcome tracking stays unique. You
-            can always edit it later in your dashboard.
+            {isGuest
+              ? "You're exploring as a guest—this plan stays on this device until you connect a wallet."
+              : "We record the plan against your wallet so outcome tracking stays unique. You can always edit it later in your dashboard."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
@@ -871,6 +952,11 @@ function ReviewStep({
               </div>
             ))}
           </div>
+          {isGuest ? (
+            <div className="rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-primary/80">
+              This plan is stored locally for your guest session. Connect a wallet later to sync it to an address.
+            </div>
+          ) : null}
           <div className="rounded-lg border border-border/60 bg-muted/30 p-4 text-xs text-muted-foreground">
             We’ll snapshot the CoinGecko USD price when you submit, then check again after
             your selected window (1–24 hours) to mark the plan as correct or incorrect

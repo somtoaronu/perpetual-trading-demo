@@ -49,7 +49,7 @@ async function fetchCoingeckoPrices(coins: CoinInput[]): Promise<Record<string, 
         return;
       }
       const candidate = entry.usdt ?? entry.usd;
-      if (Number.isFinite(candidate)) {
+      if (Number.isFinite(candidate) && (candidate as number) > 0) {
         map[coin.symbol.toUpperCase()] = candidate as number;
       }
     });
@@ -136,7 +136,7 @@ export function useCoinPrices(coins: CoinInput[], refreshMs = DEFAULT_REFRESH_MS
         if (stillMissing.length > 0 && markets.length > 0) {
           stillMissing.forEach((symbol) => {
             const fallback = findMarketFallback(symbol, markets);
-            if (Number.isFinite(fallback)) {
+            if (Number.isFinite(fallback) && (fallback as number) > 0) {
               priceMap[symbol] = fallback as number;
             }
           });
@@ -146,10 +146,17 @@ export function useCoinPrices(coins: CoinInput[], refreshMs = DEFAULT_REFRESH_MS
       if (!mountedRef.current) {
         return;
       }
+      const normalizedPrices: Record<string, number> = {};
+      Object.entries(priceMap).forEach(([symbol, value]) => {
+        if (Number.isFinite(value) && value > 0) {
+          normalizedPrices[symbol] = value;
+        }
+      });
+
       setState({
-        prices: priceMap,
+        prices: normalizedPrices,
         loading: false,
-        error: Object.keys(priceMap).length === 0 ? "No market data" : null,
+        error: Object.keys(normalizedPrices).length === 0 ? "No market data" : null,
         lastUpdated: Date.now()
       });
       if (refreshMs > 0) {

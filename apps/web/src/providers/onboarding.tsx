@@ -56,6 +56,10 @@ type OnboardingContextValue = {
   resetOnboarding: () => void;
   lastSubmission: StoredOnboarding | null;
   refreshPlan: () => Promise<void>;
+  isGuest: boolean;
+  guestWalletAddress: string | null;
+  enableGuestMode: () => void;
+  clearGuestMode: () => void;
 };
 
 const TOTAL_STEPS = 6;
@@ -68,6 +72,23 @@ const defaultSelection: OnboardingSelection = {
 };
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
+
+const GUEST_WALLET_STORAGE_KEY = "guest-wallet-address";
+
+function generateGuestWalletAddress() {
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(20);
+    crypto.getRandomValues(bytes);
+    return `0x${Array.from(bytes)
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")}`;
+  }
+  let result = "0x";
+  for (let index = 0; index < 40; index += 1) {
+    result += Math.floor(Math.random() * 16).toString(16);
+  }
+  return result;
+}
 
 function createDefaultSelection(): OnboardingSelection {
   return { ...defaultSelection };
@@ -86,10 +107,24 @@ function recordToSelection(record: OnboardingPlanRecord): OnboardingSelection {
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { address } = useAccount();
-  const normalizedAddress = useMemo(
-    () => (address ? address.toLowerCase() : null),
-    [address]
-  );
+  const [guestAddress, setGuestAddress] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    return window.localStorage.getItem(GUEST_WALLET_STORAGE_KEY);
+  });
+
+  const isGuest = useMemo(() => !!guestAddress && !address, [guestAddress, address]);
+
+  const normalizedAddress = useMemo(() => {
+    if (address) {
+      return address.toLowerCase();
+    }
+    if (guestAddress) {
+      return guestAddress.toLowerCase();
+    }
+    return null;
+  }, [address, guestAddress]);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [selection, setSelection] = useState<OnboardingSelection>(createDefaultSelection);
@@ -97,6 +132,23 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [lastSubmission, setLastSubmission] = useState<StoredOnboarding | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (guestAddress) {
+      window.localStorage.setItem(GUEST_WALLET_STORAGE_KEY, guestAddress);
+    } else {
+      window.localStorage.removeItem(GUEST_WALLET_STORAGE_KEY);
+    }
+  }, [guestAddress]);
+
+  useEffect(() => {
+    if (address && guestAddress) {
+      setGuestAddress(null);
+    }
+  }, [address, guestAddress]);
 
   const applyRecord = useCallback(
     (record: OnboardingPlanRecord, simulated: boolean) => {
@@ -129,6 +181,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadPlan = useCallback(async () => {
+    if (isGuest) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     if (!normalizedAddress) {
       resetState();
       setError(null);
@@ -154,7 +212,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [applyRecord, normalizedAddress, resetState]);
+  }, [applyRecord, normalizedAddress, resetState, isGuest]);
 
   useEffect(() => {
     void loadPlan();
@@ -179,7 +237,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       applyRecord(result.record, result.simulated);
     } else {
       setSelection((prev) => ({ ...prev, ...submission }));
-      setCompleted(false);
+      setCompleted(isGuest);
       setCurrentStep(TOTAL_STEPS - 1);
       const timestamp = new Date().toISOString();
       setLastSubmission({
@@ -190,6 +248,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         source: "local",
         simulated: true
       });
+      if (isGuest) {
+        setError(null);
+      }
     }
   };
 
@@ -198,8 +259,19 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshPlan = useCallback(async () => {
+    if (isGuest) {
+      return;
+    }
     await loadPlan();
-  }, [loadPlan]);
+  }, [isGuest, loadPlan]);
+
+  const enableGuestMode = useCallback(() => {
+    setGuestAddress((prev) => prev ?? generateGuestWalletAddress());
+  }, []);
+
+  const clearGuestMode = useCallback(() => {
+    setGuestAddress(null);
+  }, []);
 
   const value: OnboardingContextValue = {
     currentStep,
@@ -215,7 +287,11 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     markCompleted,
     resetOnboarding,
     lastSubmission,
-    refreshPlan
+    refreshPlan,
+    isGuest,
+    guestWalletAddress: guestAddress,
+    enableGuestMode,
+    clearGuestMode
   };
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
