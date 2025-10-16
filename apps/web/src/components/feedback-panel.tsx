@@ -13,7 +13,25 @@ const sentiments = [
   { id: "poor", label: "Needs Work" }
 ];
 
-const CONTROL_CHAR_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+const CONTROL_CHAR_RANGES: Array<[number, number]> = [
+  [0, 8],
+  [11, 12],
+  [14, 31],
+  [127, 127]
+];
+
+function stripControlCharacters(value: string) {
+  let result = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index] ?? "";
+    const code = char.charCodeAt(0);
+    const isControl = CONTROL_CHAR_RANGES.some(([start, end]) => code >= start && code <= end);
+    if (!isControl) {
+      result += char;
+    }
+  }
+  return result;
+}
 
 export function FeedbackPanel() {
   const [email, setEmail] = useState("");
@@ -63,7 +81,6 @@ export function FeedbackPanel() {
       setEmail("");
       setSentiment(null);
       setNotes("");
-      event.currentTarget.reset();
     } catch (error) {
       console.error("[feedback] submission failed", error);
       setStatus("error");
@@ -129,7 +146,7 @@ export function FeedbackPanel() {
               maxLength={1000}
               onChange={(event) => {
                 setStatus("idle");
-                const sanitized = event.target.value.replace(CONTROL_CHAR_REGEX, "");
+                const sanitized = stripControlCharacters(event.target.value);
                 setNotes(sanitized.slice(0, 1000));
               }}
             />
@@ -139,7 +156,7 @@ export function FeedbackPanel() {
               {status === "success"
                 ? "Thanks for helping us improve!"
                 : status === "error"
-                ? "Thanks for helping us improve."
+                ? "Something went wrong. Please try again."
                 : "We reply within 24 hours."}
             </span>
             <Button

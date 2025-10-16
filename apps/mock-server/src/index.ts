@@ -33,10 +33,48 @@ if (!process.env.MONGO_URI) {
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173")
-  .split(/[,\s]+/)
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+function normalizeOrigin(value: string): string {
+  const cleaned = value.replace(/^"|"$/g, "").trim();
+  if (!cleaned) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(cleaned);
+    return parsed.origin;
+  } catch {
+    return cleaned.replace(/\/+$/, "");
+  }
+}
+
+function parseAllowedOrigins(rawValue: string | undefined): string[] {
+  if (!rawValue) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((value): value is string => typeof value === "string")
+        .map(normalizeOrigin)
+        .filter(Boolean);
+    }
+  } catch {
+    // Ignore JSON parse errors and fall back to delimiter parsing.
+  }
+
+  return rawValue
+    .split(/[;,\s]+/)
+    .map(normalizeOrigin)
+    .filter(Boolean);
+}
+
+const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
+
+if (allowedOrigins.length === 0) {
+  allowedOrigins.push("http://localhost:5173");
+}
 
 app.use(
   cors({

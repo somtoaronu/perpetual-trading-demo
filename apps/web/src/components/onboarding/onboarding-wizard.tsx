@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   Wallet
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 import {
@@ -40,6 +40,12 @@ const STEPS = [
   { id: 5, title: "Review Plan", description: "Confirm before we save it" }
 ];
 
+type MetaMaskCapableWindow = typeof window & {
+  ethereum?: {
+    isMetaMask?: boolean;
+  };
+};
+
 export function OnboardingWizard() {
   const {
     currentStep,
@@ -58,7 +64,7 @@ export function OnboardingWizard() {
     guestWalletAddress
   } = useOnboarding();
   const { address, status: accountStatus } = useAccount();
-  const { connect, connectors, status: connectStatus } = useConnect();
+  const { connect, connectAsync, connectors, status: connectStatus } = useConnect();
   const { disconnect } = useDisconnect();
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -226,6 +232,7 @@ export function OnboardingWizard() {
         return (
           <WalletStep
             connect={connect}
+            connectAsync={connectAsync}
             connectStatus={connectStatus}
             disconnect={disconnect}
             hasWalletConnection={hasWalletConnection}
@@ -434,6 +441,7 @@ function WelcomeStep() {
 
 type WalletStepProps = {
   connect: ReturnType<typeof useConnect>["connect"];
+  connectAsync?: ReturnType<typeof useConnect>["connectAsync"];
   connectStatus: ReturnType<typeof useConnect>["status"];
   disconnect: ReturnType<typeof useDisconnect>["disconnect"];
   hasWalletConnection: boolean;
@@ -445,8 +453,11 @@ type WalletStepProps = {
   onExitGuest: () => void;
 };
 
+const METAMASK_INSTALL_URL = "https://metamask.io/download/";
+
 function WalletStep({
   connect,
+  connectAsync,
   connectStatus,
   disconnect,
   hasWalletConnection,
@@ -457,9 +468,48 @@ function WalletStep({
   onContinueAsGuest,
   onExitGuest
 }: WalletStepProps) {
+  const metaMaskReady = Boolean(metaMaskConnector?.ready);
+  const [browserHasMetaMask, setBrowserHasMetaMask] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const detectMetaMask = () => {
+      const ethereum = (window as MetaMaskCapableWindow).ethereum;
+      setBrowserHasMetaMask(Boolean(ethereum?.isMetaMask));
+    };
+    detectMetaMask();
+    const initializedHandler = () => detectMetaMask();
+    window.addEventListener("ethereum#initialized", initializedHandler as EventListener, {
+      once: true
+    });
+    return () => {
+      window.removeEventListener("ethereum#initialized", initializedHandler as EventListener);
+    };
+  }, []);
+
+  const metaMaskAvailable = metaMaskReady || browserHasMetaMask;
   const guestDisplay = guestAddress
     ? `${guestAddress.slice(0, 6)}…${guestAddress.slice(-4)}`
     : null;
+
+  const handleMetaMaskAction = async () => {
+    if (!metaMaskAvailable || !metaMaskConnector) {
+      return window.open(METAMASK_INSTALL_URL, "_blank", "noopener,noreferrer");
+    }
+
+    try {
+      if (connectAsync) {
+        await connectAsync({ connector: metaMaskConnector });
+      } else {
+        connect({ connector: metaMaskConnector });
+      }
+    } catch (error) {
+      console.warn("[onboarding] MetaMask connection failed", error);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -506,13 +556,15 @@ function WalletStep({
           ) : (
             <Button
               className="w-full gap-2"
-              disabled={!metaMaskConnector || connectStatus === "pending"}
-              onClick={() =>
-                metaMaskConnector ? connect({ connector: metaMaskConnector }) : undefined
-              }
+              disabled={connectStatus === "pending"}
+              onClick={handleMetaMaskAction}
             >
               <Wallet className="h-4 w-4" />
-              {connectStatus === "pending" ? "Connecting…" : "Connect MetaMask"}
+              {connectStatus === "pending"
+                ? "Connecting…"
+                : metaMaskAvailable
+                  ? "Connect MetaMask"
+                  : "Install MetaMask"}
             </Button>
           )}
           {!hasWalletConnection ? (
@@ -523,7 +575,25 @@ function WalletStep({
             ) : (
               <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <span>Just exploring? Browse the demo without connecting first.</span>
+                  <span>
+                    Just exploring? Browse the demo without connecting first.
+                    {!metaMaskAvailable ? (
+                      <>
+                        {" "}
+                        You can also{" "}
+                        <button
+                          type="button"
+                          className="font-medium text-primary underline-offset-4 hover:underline"
+                          onClick={() =>
+                            window.open(METAMASK_INSTALL_URL, "_blank", "noopener,noreferrer")
+                          }
+                        >
+                          install MetaMask
+                        </button>{" "}
+                        whenever you’re ready.
+                      </>
+                    ) : null}
+                  </span>
                   <Button
                     variant="outline"
                     size="sm"
