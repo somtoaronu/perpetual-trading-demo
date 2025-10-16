@@ -15,6 +15,10 @@ const DEFAULT_REFRESH_MS = 90_000;
 
 type CoinInput = Pick<CoinGuide, "symbol" | "coingeckoId">;
 
+const COINGECKO_DEMO_KEY = import.meta.env.VITE_COINGECKO_DEMO_KEY as string | undefined;
+let hasLoggedMissingKey = false;
+let hasLoggedCoingeckoFailure = false;
+
 async function fetchCoingeckoPrices(coins: CoinInput[]): Promise<Record<string, number>> {
   const ids = Array.from(
     new Set(
@@ -28,9 +32,24 @@ async function fetchCoingeckoPrices(coins: CoinInput[]): Promise<Record<string, 
     return {};
   }
 
+  if (!COINGECKO_DEMO_KEY) {
+    if (!hasLoggedMissingKey) {
+      console.info(
+        "[coingecko] skipping fallback price fetch because VITE_COINGECKO_DEMO_KEY is not set. Set a demo key to enable live CoinGecko prices."
+      );
+      hasLoggedMissingKey = true;
+    }
+    return {};
+  }
+
   try {
     const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(",")}&vs_currencies=usd,usdt`
+      `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(",")}&vs_currencies=usd,usdt`,
+      {
+        headers: {
+          "x-cg-demo-api-key": COINGECKO_DEMO_KEY
+        }
+      }
     );
 
     if (!response.ok) {
@@ -56,7 +75,10 @@ async function fetchCoingeckoPrices(coins: CoinInput[]): Promise<Record<string, 
 
     return map;
   } catch (error) {
-    console.warn("[coingecko] failed to fetch fallback prices", error);
+    if (!hasLoggedCoingeckoFailure) {
+      console.warn("[coingecko] failed to fetch fallback prices", error);
+      hasLoggedCoingeckoFailure = true;
+    }
     return {};
   }
 }
