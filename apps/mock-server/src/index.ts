@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import express, { type Request, type Response } from "express";
 import { createServer } from "node:http";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 
 import { FeedbackStore } from "./feedback-store";
@@ -15,14 +14,13 @@ import {
 } from "./providers/market-service";
 
 dotenv.config();
+const fallbackEnvPaths = [
+  path.resolve(process.cwd(), "../../.env"),
+  path.resolve(process.cwd(), "../../../.env")
+];
 
 if (!process.env.MONGO_URI) {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const candidatePaths = [
-    path.resolve(__dirname, "../../.env"),
-    path.resolve(__dirname, "../../../.env")
-  ];
-  for (const candidate of candidatePaths) {
+  for (const candidate of fallbackEnvPaths) {
     dotenv.config({ path: candidate });
     if (process.env.MONGO_URI) {
       console.log(`[env] Loaded fallback environment from ${candidate}`);
@@ -333,6 +331,12 @@ process.on("SIGINT", async () => {
 });
 
 process.on("SIGTERM", async () => {
+  await onboardingStore.close();
+  await feedbackStore.close();
+  process.exit(0);
+});
+
+process.on("SIGHUP", async () => {
   await onboardingStore.close();
   await feedbackStore.close();
   process.exit(0);
