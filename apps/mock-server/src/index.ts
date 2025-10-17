@@ -32,7 +32,7 @@ if (!process.env.MONGO_URI) {
 const app = express();
 
 function normalizeOrigin(value: string): string {
-  const cleaned = value.replace(/^"|"$/g, "").trim();
+  const cleaned = value.replace(/^[\["']+|[\]"']+$/g, "").trim();
   if (!cleaned) {
     return "";
   }
