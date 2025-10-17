@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
+import { requireApiBase } from "../lib/api-base";
 
 const sentiments = [
   { id: "excellent", label: "Excellent" },
@@ -40,7 +41,14 @@ export function FeedbackPanel() {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  const apiBaseUrl = useMemo(() => {
+    try {
+      return requireApiBase();
+    } catch (error) {
+      console.error(error);
+      return "";
+    }
+  }, []);
   const apiKey = import.meta.env.VITE_API_KEY as string | undefined;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

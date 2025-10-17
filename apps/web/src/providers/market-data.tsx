@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode
 } from "react";
+import { requireApiBase } from "../lib/api-base";
 
 export type Market = {
   id: string;
@@ -37,13 +38,14 @@ export function MarketDataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const baseUrl = requireApiBase();
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | null = null;
 
     const load = async () => {
       try {
         setError(null);
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/markets`);
+        const response = await fetch(`${baseUrl}/markets`);
         if (!response.ok) {
           throw new Error(`Failed to load markets: ${response.status}`);
         }
@@ -76,7 +78,8 @@ export function MarketDataProvider({ children }: { children: ReactNode }) {
 
   const refresh = () => {
     setLoading(true);
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/markets`)
+    const baseUrl = requireApiBase();
+    fetch(`${baseUrl}/markets`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load markets: ${response.status}`);

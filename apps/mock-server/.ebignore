@@ -1,0 +1,5 @@
+# Ignore local build artifacts; EB will install dependencies via npm
+node_modules/
+.DS_Store
+npm-debug.log*
+logs/
