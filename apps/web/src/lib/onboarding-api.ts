@@ -1,7 +1,8 @@
 import type { EvaluationWindow, PlatformGuide } from "../data/onboarding";
 import type { OnboardingSelection } from "../providers/onboarding";
+import { requireApiBase } from "./api-base";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL = requireApiBase();
 
 export type PlanSubmissionPayload = OnboardingSelection & {
   walletAddress: string | null | undefined;

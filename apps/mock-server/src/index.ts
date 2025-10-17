@@ -157,6 +157,13 @@ app.get("/health", async (_req, res) => {
   });
 });
 
+app.get("/", (_req, res) => {
+  res.json({
+    message: "Mock server is running",
+    time: new Date().toISOString()
+  });
+});
+
 app.get("/markets", (_req, res) => {
   const snapshot = getMarketsSnapshot();
   res.json(snapshot.markets);
