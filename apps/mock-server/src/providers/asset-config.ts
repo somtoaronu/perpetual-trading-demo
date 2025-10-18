@@ -5,17 +5,23 @@ function resolveProvider(envKey: string, fallback: string) {
 }
 
 function fixtureParams() {
-  const path = process.env.MARKET_FIXTURE_PATH ?? "./fixtures/markets.json";
+  const path = process.env.MARKET_FIXTURE_PATH;
+  if (!path || path.length === 0) {
+    return undefined;
+  }
   return { path };
 }
 
 function createFallback(envKey: string): AssetConfig["fallback"] {
   const provider = resolveProvider(envKey, "fixture");
   if (provider === "fixture") {
-    return {
-      provider,
-      params: fixtureParams()
-    };
+    const params = fixtureParams();
+    return params
+      ? {
+          provider,
+          params
+        }
+      : { provider };
   }
   return { provider };
 }
@@ -38,10 +44,15 @@ function createAstrFallback(): AssetConfig["fallback"] {
     return { provider: configured };
   }
 
-  return {
-    provider: "fixture",
-    params: fixtureParams()
-  };
+  const params = fixtureParams();
+  return params
+    ? {
+        provider: "fixture",
+        params
+      }
+    : {
+        provider: "fixture"
+      };
 }
 
 export const assetConfigs: AssetConfig[] = [
