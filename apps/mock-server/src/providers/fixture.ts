@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { AssetConfig, MarketData, MarketProvider } from "./types";
 
@@ -11,7 +10,7 @@ type FixtureRecord = Partial<MarketData> & {
 
 type FixtureIndex = Record<string, FixtureRecord>;
 
-const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const MODULE_DIR = __dirname;
 const DEFAULT_FIXTURE_PATH = path.join(MODULE_DIR, "fixtures", "markets.json");
 
 const DEFAULT_FIXTURE_DATA: FixtureRecord[] = [
