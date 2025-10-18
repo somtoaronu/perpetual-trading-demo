@@ -16,6 +16,10 @@ export type AssetConfig = {
   displaySymbol: string;
   provider: string;
   params: Record<string, string>;
+  fallback?: {
+    provider: string;
+    params?: Record<string, string>;
+  };
 };
 
 export interface MarketProvider {

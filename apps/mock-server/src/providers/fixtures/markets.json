@@ -1,0 +1,62 @@
+[
+  {
+    "id": "BTC-PERP",
+    "symbol": "BTC-USDT",
+    "markPrice": 64520.15,
+    "indexPrice": 64480.4,
+    "fundingRate": 0.00018,
+    "change24h": 2.4,
+    "openInterest": 328000000,
+    "volume24h": 8150000000
+  },
+  {
+    "id": "ETH-PERP",
+    "symbol": "ETH-USDT",
+    "markPrice": 3520.32,
+    "indexPrice": 3512.08,
+    "fundingRate": -0.00005,
+    "change24h": 1.9,
+    "openInterest": 152000000,
+    "volume24h": 2860000000
+  },
+  {
+    "id": "BNB-PERP",
+    "symbol": "BNB-USDT",
+    "markPrice": 598.42,
+    "indexPrice": 597.1,
+    "fundingRate": 0.00027,
+    "change24h": 3.2,
+    "openInterest": 64000000,
+    "volume24h": 940000000
+  },
+  {
+    "id": "SOL-PERP",
+    "symbol": "SOL-USDT",
+    "markPrice": 178.65,
+    "indexPrice": 177.9,
+    "fundingRate": 0.00054,
+    "change24h": 4.8,
+    "openInterest": 48500000,
+    "volume24h": 760000000
+  },
+  {
+    "id": "ASTR-PERP",
+    "symbol": "ASTR-USDT",
+    "markPrice": 0.136,
+    "indexPrice": 0.1354,
+    "fundingRate": 0.0009,
+    "change24h": 5.3,
+    "openInterest": 8200000,
+    "volume24h": 28500000
+  },
+  {
+    "id": "HYPE-PERP",
+    "symbol": "HYPE-USDT",
+    "markPrice": 142.6,
+    "indexPrice": 143.1,
+    "fundingRate": 0.0012,
+    "change24h": 6.7,
+    "openInterest": 12500000,
+    "volume24h": 198000000
+  }
+]
