@@ -32,3 +32,9 @@ export function formatDecimal(
     maximumFractionDigits: maximumFractionDigits ?? Math.max(0, minimumFractionDigits ?? 2)
   }).format(value as number);
 }
+
+export function buildWebSocketUrl(base: string, path: string): string {
+  const url = new URL(path, base);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString();
+}

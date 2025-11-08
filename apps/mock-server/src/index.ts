@@ -12,6 +12,11 @@ import {
   startMarketPolling,
   subscribeToMarketUpdates
 } from "./providers/market-service";
+import {
+  getSentimentSnapshot,
+  startSentimentPolling,
+  subscribeToSentiment
+} from "./sentiment/sentiment-service";
 
 dotenv.config();
 const fallbackEnvPaths = [
@@ -146,6 +151,7 @@ const feedbackStore = new FeedbackStore({
 });
 
 startMarketPolling();
+startSentimentPolling();
 
 app.get("/health", async (_req, res) => {
   const snapshot = getMarketsSnapshot();
@@ -167,6 +173,10 @@ app.get("/", (_req, res) => {
 app.get("/markets", (_req, res) => {
   const snapshot = getMarketsSnapshot();
   res.json(snapshot.markets);
+});
+
+app.get("/psychology", (_req, res) => {
+  res.json(getSentimentSnapshot());
 });
 
 app.get("/positions", (_req, res) => {
@@ -278,6 +288,7 @@ app.use((err: Error, _req: Request, res: Response, _next: () => void) => {
 
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer, path: "/stream" });
+const psychologyWss = new WebSocketServer({ server: httpServer, path: "/psych" });
 
 wss.on("connection", (socket) => {
   const snapshot = getMarketsSnapshot();
@@ -286,6 +297,18 @@ wss.on("connection", (socket) => {
       type: "hello",
       message: "Market stream connected",
       markets: snapshot.markets
+    })
+  );
+});
+
+psychologyWss.on("connection", (socket) => {
+  const snapshot = getSentimentSnapshot();
+  socket.send(
+    JSON.stringify({
+      type: "psychology:init",
+      at: Date.now(),
+      signals: snapshot.signals,
+      lastUpdated: snapshot.lastUpdated
     })
   );
 });
@@ -300,6 +323,19 @@ subscribeToMarketUpdates((markets) => {
   wss.clients.forEach((client) => {
     if (client.readyState === 1) {
       client.send(JSON.stringify(payload));
+    }
+  });
+});
+
+subscribeToSentiment((signals) => {
+  const payload = JSON.stringify({
+    type: "psychology:update",
+    at: Date.now(),
+    signals
+  });
+  psychologyWss.clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(payload);
     }
   });
 });

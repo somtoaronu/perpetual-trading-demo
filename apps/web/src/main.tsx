@@ -5,14 +5,17 @@ import App from "./App.tsx";
 import { Web3Provider } from "./providers/web3";
 import { OnboardingProvider } from "./providers/onboarding";
 import { MarketDataProvider } from "./providers/market-data";
+import { PsychologyProvider } from "./providers/psychology";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Web3Provider>
       <MarketDataProvider>
-        <OnboardingProvider>
-          <App />
-        </OnboardingProvider>
+        <PsychologyProvider>
+          <OnboardingProvider>
+            <App />
+          </OnboardingProvider>
+        </PsychologyProvider>
       </MarketDataProvider>
     </Web3Provider>
   </StrictMode>

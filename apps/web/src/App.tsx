@@ -10,6 +10,7 @@ import { RiskSnapshotCard } from "./components/beginner/risk-snapshot-card";
 import { FundingOutlookCard } from "./components/beginner/funding-outlook-card";
 import { NextStepsChecklist } from "./components/beginner/next-steps-checklist";
 import { FeedbackPanel } from "./components/feedback-panel";
+import { PsychologyPanel } from "./components/psychology-panel";
 import { useOnboarding } from "./providers/onboarding";
 
 function App() {
@@ -36,7 +37,10 @@ function App() {
             </div>
             <div className="grid gap-6 xl:grid-cols-[1.8fr,1fr]">
               <ChartPanel />
-              <FundingOutlookCard />
+              <div className="grid gap-6">
+                <FundingOutlookCard />
+                <PsychologyPanel />
+              </div>
             </div>
             <div className="grid gap-6 xl:grid-cols-2">
               <NextStepsChecklist
