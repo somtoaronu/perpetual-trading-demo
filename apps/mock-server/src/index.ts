@@ -287,10 +287,28 @@ app.use((err: Error, _req: Request, res: Response, _next: () => void) => {
 });
 
 const httpServer = createServer(app);
-const wss = new WebSocketServer({ server: httpServer, path: "/stream" });
-const psychologyWss = new WebSocketServer({ server: httpServer, path: "/psych" });
+const marketWss = new WebSocketServer({ noServer: true });
+const psychologyWss = new WebSocketServer({ noServer: true });
 
-wss.on("connection", (socket) => {
+httpServer.on("upgrade", (request, socket, head) => {
+  const { url } = request;
+  if (url?.startsWith("/stream")) {
+    marketWss.handleUpgrade(request, socket, head, (ws) => {
+      marketWss.emit("connection", ws, request);
+    });
+    return;
+  }
+  if (url?.startsWith("/psych")) {
+    psychologyWss.handleUpgrade(request, socket, head, (ws) => {
+      psychologyWss.emit("connection", ws, request);
+    });
+    return;
+  }
+
+  socket.destroy();
+});
+
+marketWss.on("connection", (socket) => {
   const snapshot = getMarketsSnapshot();
   socket.send(
     JSON.stringify({
@@ -320,7 +338,7 @@ subscribeToMarketUpdates((markets) => {
     markets
   };
 
-  wss.clients.forEach((client) => {
+  marketWss.clients.forEach((client) => {
     if (client.readyState === 1) {
       client.send(JSON.stringify(payload));
     }

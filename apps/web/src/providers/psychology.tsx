@@ -48,8 +48,17 @@ function dedupeSignals(signals: SentimentSignal[]): SentimentSignal[] {
     .slice(0, MAX_SIGNAL_COUNT);
 }
 
+function resolveSocketBase(fallback: string): string {
+  const explicit = import.meta.env.VITE_WS_BASE_URL?.trim();
+  if (explicit) {
+    return explicit;
+  }
+  return fallback;
+}
+
 export function PsychologyProvider({ children }: { children: ReactNode }) {
-  const baseUrl = useMemo(() => requireApiBase(), []);
+  const apiBase = useMemo(() => requireApiBase(), []);
+  const socketBase = useMemo(() => resolveSocketBase(apiBase), [apiBase]);
   const [signals, setSignals] = useState<SentimentSignal[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +72,7 @@ export function PsychologyProvider({ children }: { children: ReactNode }) {
     async function loadSnapshot() {
       setLoading(true);
       try {
-        const response = await fetch(`${baseUrl}/psychology`);
+        const response = await fetch(`${apiBase}/psychology`);
         if (!response.ok) {
           throw new Error(`Failed to load psychology feed (${response.status})`);
         }
@@ -91,7 +100,7 @@ export function PsychologyProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [baseUrl]);
+  }, [apiBase]);
 
   useEffect(() => {
     let shouldReconnect = true;
@@ -100,12 +109,13 @@ export function PsychologyProvider({ children }: { children: ReactNode }) {
 
     const connect = () => {
       setConnectionState("connecting");
-      const wsUrl = buildWebSocketUrl(baseUrl, "/psych");
+      const wsUrl = buildWebSocketUrl(socketBase, "/psych");
       socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {
         reconnectAttempts = 0;
         setConnectionState("connected");
+        setError(null);
       };
 
       socket.onmessage = (event) => {
@@ -124,8 +134,13 @@ export function PsychologyProvider({ children }: { children: ReactNode }) {
         }
       };
 
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         setConnectionState("disconnected");
+        if (!event.wasClean) {
+          setError(
+            `Live psychology feed disconnected (code ${event.code ?? "unknown"}). Retrying…`
+          );
+        }
         if (!shouldReconnect) {
           return;
         }
@@ -134,7 +149,9 @@ export function PsychologyProvider({ children }: { children: ReactNode }) {
         window.setTimeout(connect, delay);
       };
 
-      socket.onerror = () => {
+      socket.onerror = (socketError) => {
+        console.warn("[psychology] websocket error", socketError);
+        setError("Unable to reach live psychology feed. Retrying…");
         socket?.close();
       };
     };
@@ -145,7 +162,7 @@ export function PsychologyProvider({ children }: { children: ReactNode }) {
       shouldReconnect = false;
       socket?.close();
     };
-  }, [baseUrl]);
+  }, [socketBase]);
 
   const value = useMemo<PsychologyContextValue>(
     () => ({

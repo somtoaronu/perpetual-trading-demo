@@ -19,7 +19,7 @@ async function fetchTelegramSignals(): Promise<SentimentSignal[]> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_GROUP_ID;
   if (!token || !chatId) {
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.ALLOW_SENTIMENT_PLACEHOLDER === "true") {
       return [
         {
           id: `telegram-placeholder-${Date.now()}`,
