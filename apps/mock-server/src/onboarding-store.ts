@@ -1,4 +1,4 @@
-import { MongoClient, type Collection } from "mongodb";
+import { MongoClient, type Collection, type ModifyResult } from "mongodb";
 
 export type OnboardingPlanInput = {
   walletAddress: string;
@@ -138,21 +138,20 @@ export class OnboardingStore {
       updatedAt: timestamp
     };
 
-    const updatedDoc = await collection.findOneAndUpdate(
+    const result: ModifyResult<OnboardingPlanDocument> = await collection.findOneAndUpdate(
       { walletAddress: normalizedWallet },
       { $set: updateDoc },
-      { upsert: true, returnDocument: "after" }
+      { upsert: true, returnDocument: "after", includeResultMetadata: true }
     );
 
-    if (updatedDoc) {
-      return toRecord(updatedDoc);
-    }
+    const updatedDoc = result?.value
+      ? result.value
+      : await collection.findOne({ walletAddress: normalizedWallet });
 
-    const fallbackDoc = await collection.findOne({ walletAddress: normalizedWallet });
-    if (!fallbackDoc) {
+    if (!updatedDoc) {
       throw new Error("Failed to persist onboarding plan.");
     }
-    return toRecord(fallbackDoc);
+    return toRecord(updatedDoc);
   }
 }
 
@@ -180,4 +179,3 @@ function toIsoString(value: Date | string): string {
   }
   return new Date(value).toISOString();
 }
-

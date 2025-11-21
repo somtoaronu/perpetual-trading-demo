@@ -1,7 +1,6 @@
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
 if (!rawBaseUrl) {
-  // eslint-disable-next-line no-console
   console.error(
     "[api] Missing VITE_API_BASE_URL. Set it in your environment or .env.production for builds."
   );

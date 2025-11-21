@@ -14,6 +14,10 @@ let lastUpdated = 0;
 const alertedSignals = new Set<string>();
 
 const REFRESH_INTERVAL_MS = Number(process.env.SENTIMENT_REFRESH_MS ?? 300_000);
+const MAX_SIGNAL_COUNT = Number(process.env.SENTIMENT_MAX_COUNT ?? 200);
+const MAX_SIGNAL_AGE_MS = Number(
+  process.env.SENTIMENT_MAX_AGE_MS ?? 24 * 60 * 60 * 1000 // 24h default
+);
 
 const providers: SentimentProvider[] = [perplexityProvider, redditProvider, telegramProvider];
 
@@ -26,12 +30,18 @@ async function runProvider(provider: SentimentProvider): Promise<SentimentSignal
   }
 }
 
-function dedupeSignals(signals: SentimentSignal[]): SentimentSignal[] {
+function dedupeAndTrim(signals: SentimentSignal[]): SentimentSignal[] {
+  const now = Date.now();
   const map = new Map<string, SentimentSignal>();
   [...cache, ...signals].forEach((signal) => {
+    if (Number.isFinite(MAX_SIGNAL_AGE_MS) && now - signal.createdAt > MAX_SIGNAL_AGE_MS) {
+      return;
+    }
     map.set(signal.id, signal);
   });
-  return Array.from(map.values()).sort((a, b) => b.createdAt - a.createdAt);
+  return Array.from(map.values())
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, MAX_SIGNAL_COUNT);
 }
 
 function shouldTriggerAlert(signal: SentimentSignal): boolean {
@@ -70,7 +80,7 @@ export async function refreshSentimentSignals() {
   if (merged.length === 0) {
     return;
   }
-  cache = dedupeSignals(merged);
+  cache = dedupeAndTrim(merged);
   lastUpdated = Date.now();
   emitter.emit(SENTIMENT_EVENT, cache);
   void handleAlerts(merged);

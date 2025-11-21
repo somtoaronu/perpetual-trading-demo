@@ -3,6 +3,7 @@ import type { OnboardingSelection } from "../providers/onboarding";
 import { requireApiBase } from "./api-base";
 
 const API_BASE_URL = requireApiBase();
+const API_KEY = import.meta.env.VITE_API_KEY?.trim();
 
 export type PlanSubmissionPayload = OnboardingSelection & {
   walletAddress: string | null | undefined;
@@ -32,6 +33,17 @@ function buildEndpoint(path: string) {
   return `${normalizedBase}${normalizedPath}`;
 }
 
+function buildHeaders(includeJson = false): HeadersInit {
+  const headers: Record<string, string> = {};
+  if (includeJson) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (API_KEY) {
+    headers["x-api-key"] = API_KEY;
+  }
+  return headers;
+}
+
 export async function submitOnboardingPlan(
   payload: PlanSubmissionPayload
 ): Promise<SubmitOnboardingPlanResult> {
@@ -42,9 +54,7 @@ export async function submitOnboardingPlan(
   try {
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: buildHeaders(true),
       body: JSON.stringify(payload),
       signal: controller.signal
     });
@@ -85,9 +95,7 @@ export async function getOnboardingPlan(
     const response = await fetch(endpoint, {
       method: "GET",
       signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json"
-      }
+      headers: buildHeaders(true)
     });
 
     if (response.status === 404) {

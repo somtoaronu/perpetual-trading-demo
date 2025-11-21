@@ -178,6 +178,7 @@ export function PsychologyProvider({ children }: { children: ReactNode }) {
   return <PsychologyContext.Provider value={value}>{children}</PsychologyContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePsychology() {
   const context = useContext(PsychologyContext);
   if (!context) {
