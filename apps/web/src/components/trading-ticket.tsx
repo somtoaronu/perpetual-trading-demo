@@ -1,22 +1,43 @@
 import { ChevronDown, Info } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { strategyPresets } from "../data/mock";
+import { usePlanMetrics } from "../hooks/usePlanMetrics";
+import { formatDecimal } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Separator } from "./ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 export function TradingTicket() {
+  const { selection, metrics } = usePlanMetrics();
   const [orderSide, setOrderSide] = useState<"long" | "short">("long");
-  const [leverage, setLeverage] = useState(5);
+  const [leverage, setLeverage] = useState(selection.leverage ?? 5);
   const [size, setSize] = useState(1.25);
   const [marginMode, setMarginMode] = useState<"isolated" | "cross">("isolated");
+
+  useEffect(() => {
+    setLeverage(selection.leverage ?? 5);
+  }, [selection.leverage]);
+
+  const baseSymbol = selection.coinSymbol ?? "ETH";
+  const markPrice = metrics.markPrice || 0;
+  const leverageDisplay = formatDecimal(leverage, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+    fallback: "—"
+  });
+  const orderSizeLabel = `Order Size (${baseSymbol.toUpperCase()})`;
+
+  const notional = useMemo(() => markPrice * size, [markPrice, size]);
+  const requiredMargin = leverage > 0 ? notional / leverage : notional;
+  const fundingSlice = (metrics.fundingRate ?? 0) * notional;
+  const liquidationHint = metrics.liquidationPrice;
 
   return (
     <Card className="flex h-full flex-col">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Trade Ticket</CardTitle>
+        <CardTitle>{baseSymbol.toUpperCase()} Perpetual Ticket</CardTitle>
         <Button variant="ghost" size="sm" className="gap-1">
           Presets
           <ChevronDown className="h-4 w-4" />
@@ -52,8 +73,11 @@ export function TradingTicket() {
               </div>
               <div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Order Size (ETH)</span>
-                  <span>{size.toFixed(2)}</span>
+                  <span>{orderSizeLabel}</span>
+                  <span>{formatDecimal(size, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}</span>
                 </div>
                 <input
                   type="range"
@@ -68,7 +92,7 @@ export function TradingTicket() {
               <div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Leverage</span>
-                  <span>{leverage.toFixed(1)}x</span>
+                  <span>{leverageDisplay}x</span>
                 </div>
                 <input
                   type="range"
@@ -85,16 +109,29 @@ export function TradingTicket() {
                 <div className="flex items-center justify-between">
                   <span>Required Margin</span>
                   <span className="font-semibold">
-                    {(size * 3215.34 * (1 / leverage)).toFixed(2)} USDC
+                    {`${formatDecimal(requiredMargin, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })} USDT`}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span>Est. Liquidation</span>
-                  <span>2,960.20</span>
+                  <span>
+                    {formatDecimal(liquidationHint, {
+                      minimumFractionDigits: liquidationHint < 1 ? 4 : 2,
+                      maximumFractionDigits: liquidationHint < 1 ? 6 : 2
+                    })}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span>Funding Impact (next)</span>
-                  <span>{(size * 3215.34 * 0.00015).toFixed(2)} USDC</span>
+                  <span>
+                    {`${fundingSlice >= 0 ? "+" : "-"}${formatDecimal(Math.abs(fundingSlice), {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })} USDT`}
+                  </span>
                 </div>
               </div>
               <Button className="w-full text-base">
@@ -109,12 +146,18 @@ export function TradingTicket() {
                   Limit Price
                   <input
                     type="number"
-                    defaultValue={3214.5}
+                    defaultValue={
+                      markPrice > 0
+                        ? Number(
+                            markPrice.toFixed(markPrice < 1 ? 4 : 2)
+                          )
+                        : 0
+                    }
                     className="w-full rounded-md border border-border/40 bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </label>
                 <label className="space-y-2 text-xs uppercase tracking-wide text-muted-foreground">
-                  Size (ETH)
+                  {`Size (${baseSymbol.toUpperCase()})`}
                   <input
                     type="number"
                     defaultValue={1.5}

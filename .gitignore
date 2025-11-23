@@ -22,3 +22,6 @@ contracts/typechain/
 
 # Misc
 .DS_Store
+.vscode
+apps/mock-server/.elasticbeanstalk/
+apps/mock-server/.ebextensions/

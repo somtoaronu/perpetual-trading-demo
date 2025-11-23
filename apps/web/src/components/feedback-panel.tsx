@@ -1,0 +1,183 @@
+import { useMemo, useState, type FormEvent } from "react";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
+import { requireApiBase } from "../lib/api-base";
+
+const sentiments = [
+  { id: "excellent", label: "Excellent" },
+  { id: "good", label: "Good" },
+  { id: "average", label: "Average" },
+  { id: "poor", label: "Needs Work" }
+];
+
+const CONTROL_CHAR_RANGES: Array<[number, number]> = [
+  [0, 8],
+  [11, 12],
+  [14, 31],
+  [127, 127]
+];
+
+function stripControlCharacters(value: string) {
+  let result = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index] ?? "";
+    const code = char.charCodeAt(0);
+    const isControl = CONTROL_CHAR_RANGES.some(([start, end]) => code >= start && code <= end);
+    if (!isControl) {
+      result += char;
+    }
+  }
+  return result;
+}
+
+export function FeedbackPanel() {
+  const [email, setEmail] = useState("");
+  const [sentiment, setSentiment] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const apiBaseUrl = useMemo(() => {
+    try {
+      return requireApiBase();
+    } catch (error) {
+      console.error(error);
+      return "";
+    }
+  }, []);
+  const apiKey = import.meta.env.VITE_API_KEY as string | undefined;
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!apiBaseUrl) {
+      console.warn("[feedback] VITE_API_BASE_URL is not defined; skipping submission.");
+      setStatus("error");
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    const trimmedNotes = notes.trim();
+
+    const payload: Record<string, unknown> = {
+      notes: trimmedNotes
+    };
+    if (trimmedEmail.length > 0) {
+      payload.email = trimmedEmail;
+    }
+    if (sentiment) {
+      payload.sentiment = sentiment;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${apiBaseUrl}/feedback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { "x-api-key": apiKey } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error(`Failed with status ${response.status}`);
+      }
+      setStatus("success");
+      setEmail("");
+      setSentiment(null);
+      setNotes("");
+    } catch (error) {
+      console.error("[feedback] submission failed", error);
+      setStatus("error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="h-full border-border/40 bg-background/70">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base">Share Your Feedback</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground/80">
+          Tell us what’s working and where we can improve the onboarding experience.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="feedback-email">Email (optional)</Label>
+            <Input
+              id="feedback-email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              maxLength={120}
+              autoComplete="email"
+              inputMode="email"
+              onChange={(event) => {
+                setStatus("idle");
+                setEmail(event.target.value.slice(0, 120));
+              }}
+            />
+          </div>
+          <fieldset className="space-y-2">
+            <Label>Overall Experience</Label>
+            <div className="flex flex-wrap gap-2">
+              {sentiments.map((option) => {
+                const active = sentiment === option.id;
+                return (
+                  <Button
+                    key={option.id}
+                    type="button"
+                    variant={active ? "default" : "outline"}
+                    onClick={() => {
+                      setStatus("idle");
+                      setSentiment(active ? null : option.id);
+                    }}
+                    className={active ? "border-primary/50" : undefined}
+                  >
+                    {option.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
+          <div className="space-y-2">
+            <Label htmlFor="feedback-notes">What should we know?</Label>
+            <Textarea
+              id="feedback-notes"
+              placeholder="Share wins, confusion points, or wishlist features."
+              value={notes}
+              maxLength={1000}
+              onChange={(event) => {
+                setStatus("idle");
+                const sanitized = stripControlCharacters(event.target.value);
+                setNotes(sanitized.slice(0, 1000));
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {status === "success"
+                ? "Thanks for helping us improve!"
+                : status === "error"
+                ? "Something went wrong. Please try again."
+                : "We reply within 24 hours."}
+            </span>
+            <Button
+              type="submit"
+              disabled={
+                isSubmitting || (!sentiment && notes.trim().length === 0) || !apiBaseUrl
+              }
+            >
+              {isSubmitting ? "Sending…" : "Send Feedback"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

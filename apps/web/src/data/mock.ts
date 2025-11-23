@@ -24,6 +24,16 @@ export const markets = [
     status: "live" as const
   },
   {
+    symbol: "BNB-USDC",
+    markPrice: 582.45,
+    indexPrice: 581.88,
+    change24h: 2.24,
+    fundingRate: 0.018,
+    openInterest: 51234321,
+    volume24h: 218_554_002,
+    status: "live" as const
+  },
+  {
     symbol: "SOL-USDC",
     markPrice: 178.54,
     indexPrice: 178.22,
@@ -32,6 +42,26 @@ export const markets = [
     openInterest: 54231234,
     volume24h: 112_991_221,
     status: "hot" as const
+  },
+  {
+    symbol: "ASTR-USDC",
+    markPrice: 0.019,
+    indexPrice: 0.0188,
+    change24h: 4.26,
+    fundingRate: 0.008,
+    openInterest: 12_334_221,
+    volume24h: 9_881_224,
+    status: "emerging" as const
+  },
+  {
+    symbol: "HYPE-USDC",
+    markPrice: 142.17,
+    indexPrice: 141.26,
+    change24h: 5.78,
+    fundingRate: 0.027,
+    openInterest: 32_114_889,
+    volume24h: 158_228_110,
+    status: "experimental" as const
   },
   {
     symbol: "NVDA-USD",

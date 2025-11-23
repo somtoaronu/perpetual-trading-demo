@@ -1,5 +1,5 @@
 ## Perpetual Trading MVP Requirements
-_Last updated: October 7, 2025_
+_Last updated: October 9, 2025_
 
 ### 1. Objective
 - Deliver a research-backed demo that explains perpetual swaps from beginner to advanced levels while mimicking Aster’s “Simple vs. Pro” experience.citeturn0search2
@@ -34,6 +34,8 @@ Learning path:
 - MetaMask connect button with network gate (Sepolia default, fallback to Hardhat local chain).
 - Read-only market browsing permitted without wallet; trade actions gated behind connection.
 - Tutorial mode overlays highlight: funding, margin, liquidation price, fees.
+- Guided onboarding wizard must persist the selected plan by calling `POST /api/onboarding`; the response unblocks the dashboard view and stores a timestamped summary of the wallet’s preferences.
+- On application boot or wallet reconnect, call `GET /api/onboarding/:wallet` to hydrate state; if no record exists the user stays inside the wizard instead of falling back to the generic index layout (the current bug we observed when the database is absent).
 
 **5.2 Market Data & Mock Services**
 - Markets list with tickers, mark/index price, 24h change, funding rate, open interest; data pulled from mock WebSocket service seeded with random-walk generator.
@@ -65,42 +67,67 @@ Learning path:
 - Deterministic seeds ensure reproducible demos; configuration stored in `.json` templates for each market.
 - Funding engine recalculates every cycle: `fundingPayment = positionValue * fundingRate * (cycleMinutes/480)` (since 8-hour windows = 480 minutes).citeturn0search4
 
-### 7. Technical Architecture
+### 7. Persistence & Backend API
+- **Service Footprint:** Extend `apps/mock-server` into a lightweight API tier (or spin up `apps/data-service`) reachable via `VITE_API_BASE_URL`; keep market mocks but add onboarding persistence routes.
+- **Environment Variables:** The service reads `MONGO_URI` (aka `mongoUri`) and optional `PORT`; the web app needs `VITE_API_BASE_URL`. Example local string: `mongodb://localhost:27017/perp_demo`.
+- **Onboarding Plan Schema:** Store documents in `onboardingPlans` with fields `walletAddress` (lowercased, unique), `platformId`, `coinSymbol`, `evaluationWindow`, `leverage`, `stake`, `predictionDirection`, `submittedAt`, `updatedAt`, plus optional `notes`.
+- **API Contract:** `POST /api/onboarding` upserts the plan, normalises wallet casing, stamps server time, and returns the saved record; `GET /api/onboarding/:walletAddress` fetches the latest plan or 404s when absent; optionally expose `GET /api/onboarding` for admin review.
+- **Setup & Tooling:** Ship a seed script (e.g., `pnpm seed:onboarding`) that connects with `const mongoUri = process.env.MONGO_URI ?? "mongodb://localhost:27017/perp_demo";`, creates the collection, ensures a unique index on `walletAddress`, and can preload demo plans.
+- **QA Expectation:** If Mongo is unreachable, surface a clear error state so users remain in the wizard—this prevents the “previous index page” regression we see when persistence is missing.
+
+```bash
+mongosh "$mongoUri" --eval 'db.onboardingPlans.createIndex({ walletAddress: 1 }, { unique: true })'
+```
+
+### 8. Beginner Outlook Experience
+- **Plan Summary Card:** Show the saved onboarding plan in plain language (platform, coin, direction, leverage, stake, evaluation window) with status pills and a quick “Edit Plan” action that reopens onboarding.
+- **Risk Snapshot:** Calculate notional size, estimated liquidation price, and +/- scenario PnL for a configurable price move (default 2%). Highlight results with accessible colour coding and supporting copy.
+- **Funding Outlook:** Project the funding credit/debit over the learner’s evaluation window using the current mock funding rate. Include time-to-next cycle and plain-language guidance.
+- **Next Steps Checklist:** Provide three actionable steps (fund account, set stop-loss, monitor funding timer) with links or scroll-to actions pointing to the relevant UI modules.
+- **Timeline Narrative:** Insert a mini timeline in the education panel describing what the learner should check at entry, mid-window, and wrap-up based on their plan.
+- **Layout Priorities:** Beginner cards must occupy the first viewport row on the dashboard, with advanced widgets (order book, depth) tucked behind an optional “Pro View” toggle.
+
+### 8. Technical Architecture
 - **Monorepo Layout:** `apps/web` (Vite React), `apps/mock-server`, `packages/ui` (shared shadcn components), `contracts` (Hardhat).
 - **State Management:** Zustand with selectors; React Query for server sync.
 - **Wallet & Chains:** `wagmi` + `viem` targeting Sepolia and Hardhat networks; fallback connectors for MetaMask only.
 - **UI Toolkit:** Install shadcn/ui (button, card, dialog, tabs, table, chart wrappers). Tailwind `base` + theme tokens reflecting dark trading aesthetic inspired by reference dashboards.citeturn2search0
 - **Testing:** Vitest + React Testing Library for critical UI logic; Hardhat tests stub event emission.
 
-### 8. shadcn UI Integration Plan
+### 9. shadcn UI Integration Plan
 - Generate component primitives (Navbar, Sidebar, Command palette) via shadcn CLI.
 - Compose reusable widgets: `OrderTicket`, `OrderBook`, `DepthChart`, `FundingTicker`, `TutorialStepper`.
 - Apply Tailwind CSS variables for dark/light toggles; use shadcn `ThemeToggle` for accessible contrast.
 
-### 9. Hardhat Placeholder Contracts
+### 10. Hardhat Placeholder Contracts
 - `MockUSDC.sol`: ERC20 with faucet `mint`.
 - `MockOracle.sol`: owner-settable price; emits `PriceUpdated`.
 - `PerpEngine.sol`: Interfaces for `deposit`, `withdraw`, `openPosition`, `closePosition`, `liquidate`; internal logic stubbed with events so the front end can react without real accounting.
 - Provide deployment script targeting Hardhat network and Sepolia (optional), plus TypeScript typings via `typechain`.
 
-### 10. Implementation Roadmap
+### 11. Implementation Roadmap
 1. **Phase 0 – Tooling:** Initialize pnpm workspace, set up linting/formatting, commit hooks.
 2. **Phase 1 – Web Shell:** Scaffold layout, global state, mock data adapters, wallet connect.
 3. **Phase 2 – Trading Modules:** Implement order book, trades feed, tickets, positions, analytics.
-4. **Phase 3 – Education Layer:** Guided tour, glossary, scenario simulator.
-5. **Phase 4 – Contracts & Integration:** Deploy placeholder contracts locally, wire minimal read/write using MetaMask.
-6. **Phase 5 – Polish:** Responsive tweaks, theming, documentation, handoff notes.
+4. **Phase 2.5 – Onboarding API:** Wire Express + Mongo persistence, add health checks, and connect the wizard submit/retrieve flows.
+5. **Phase 3 – Beginner Outlook Dashboard:** Implement plan summary, risk snapshot, funding outlook, checklist, and timeline narrative.
+6. **Phase 4 – Education Layer:** Guided tour, glossary, scenario simulator.
+7. **Phase 5 – Contracts & Integration:** Deploy placeholder contracts locally, wire minimal read/write using MetaMask.
+8. **Phase 6 – Polish:** Responsive tweaks, theming, documentation, handoff notes.
 
-### 11. Risks & Open Items
+### 12. Risks & Open Items
 - **Market Authenticity:** Mock data must feel realistic; calibrate volatility to avoid implausible spikes.
 - **Performance:** Keep WebSocket diff handling efficient to mimic Hyperliquid responsiveness.citeturn1search0
 - **Education Depth:** Ensure advanced content aligns with Aster feature set (e.g., equity perps, multi-asset margin).citeturn0search7
 - **Future Integration:** Plan upgrade path for real oracle feeds and execution once contracts mature.
+- **Persistence Reliability:** Missing Mongo connectivity currently drops users back on the generic index; add smoke tests and monitoring to prevent silent regressions.
+- **Beginner Accuracy:** Risk and funding projections rely on simplified formulas; verify copy emphasises assumptions to avoid over-promising.
 
-### 12. Deliverables Checklist
+### 13. Deliverables Checklist
 - Updated `REQUIREMENTS.md` (this document).
 - Research notes and citations embedded.
 - Monorepo scaffold with web app, mock server, and Hardhat stubs.
 - UI components matching reference layouts.
 - Mock trading flow demonstrating Simple + Pro modes and education overlay.
-
+- Onboarding persistence service wired to Mongo with documented schema, seed script, and health checks.
+- Beginner Outlook dashboard components explaining expected risk/reward and next steps.
